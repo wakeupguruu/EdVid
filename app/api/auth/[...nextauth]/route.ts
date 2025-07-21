@@ -1,9 +1,6 @@
-import { NextRequest, NextResponse } from "next/server"
+import NextAuth from "next-auth"
+import { Next_Auth } from "@/app/lib/auth";
+import next from "next";
+export const handler = NextAuth(Next_Auth)
 
-export async function GET(req: NextRequest, {params}:any) {
-   const nextauth = await  params.nextauth;
-   console.log("NextAuth Params:", nextauth);
-    return NextResponse.json({
-        message: "Handler"
-    })
-}
+export { handler as GET, handler as POST }
