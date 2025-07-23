@@ -3,16 +3,20 @@
 
 import { useState } from "react";
 import { setUserName } from "@/app/actions/setName";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 
 export default function NameModal({ userId }: { userId: string }) {
+  const {update} = useSession();
   const [name, setName] = useState("");
   const [isVisible, setIsVisible] = useState(true); // Modal starts open
-
+  const router = useRouter();
   const handleSubmit = async () => {
     if (!name.trim()) return;
     await setUserName(userId, name.trim());
     setIsVisible(false);
-    window.location.reload(); // Refresh to reflect new name in session if needed
+    await update();
+    router.refresh(); // Refresh to reflect new name in session if needed
   };
 
   if (!isVisible) return null;

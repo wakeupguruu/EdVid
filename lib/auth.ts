@@ -96,11 +96,22 @@ export const Next_Auth: NextAuthOptions = {
       return token;
     },
 
-    async session({ session, token }: { session: Session; token: JWT; }): Promise<Session> {
-        const user = session.user as ExtendedUser;
-            user.id = token.id as string;
-            user.name = token.name as string | null;
-        return session;
+    async session({ session }: { session: Session; token: JWT }): Promise<Session> {
+      const userEmail = session.user?.email;
+      if (!userEmail) return session;
+
+      // 👇 Fetch the latest user data from your database
+      const dbUser = await prisma.user.findUnique({
+        where: { email: userEmail },
+      });
+
+      if (dbUser) {
+        // 👇 Overwrite session data with fresh DB values
+        (session.user as ExtendedUser).name = dbUser.name;
+        (session.user as any).id = dbUser.id;
+      }
+
+      return session;
     },
   },
 
