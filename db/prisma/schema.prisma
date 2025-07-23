@@ -1,0 +1,100 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enum for prompt status
+enum PromptStatus {
+  pending
+  processing
+  completed
+  failed
+}
+
+model User {
+  id        String    @id @default(cuid())
+  name      String?
+  email     String?   @unique
+  password  String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  prompts   Prompt[]
+  logs      ActivityLog[]
+}
+
+model Prompt {
+  id               String        @id @default(cuid())
+  inputText        String
+  content          String
+  status           PromptStatus  @default(pending)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  startedProcessingAt DateTime?
+  completedAt      DateTime?
+  deletedAt        DateTime?
+
+  previousPromptId String?
+  userId           String
+
+  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  previousPrompt   Prompt?       @relation("PromptHistory", fields: [previousPromptId], references: [id])
+  nextPrompts      Prompt[]      @relation("PromptHistory")
+
+  codeSnippet      CodeSnippet?
+  video            Video?
+  logs             ActivityLog[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([userId, createdAt])
+}
+
+model CodeSnippet {
+  id        String   @id @default(uuid())
+  promptId  String   @unique
+  code      String
+  language  String
+  createdAt DateTime @default(now())
+
+  prompt    Prompt   @relation(fields: [promptId], references: [id])
+}
+
+model Video {
+  id        String         @id @default(uuid())
+  promptId  String         @unique
+  createdAt DateTime       @default(now())
+
+  prompt    Prompt         @relation(fields: [promptId], references: [id])
+  formats   VideoFormat[]
+}
+
+model VideoFormat {
+  id        String   @id @default(uuid())
+  videoId   String
+  resolution String  // "480p", "720p", "1080p"
+  url       String
+
+  video     Video    @relation(fields: [videoId], references: [id])
+
+  @@index([videoId])
+  @@index([resolution])
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  userId    String
+  promptId  String?
+  action    String         
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  prompt    Prompt?  @relation(fields: [promptId], references: [id])
+}

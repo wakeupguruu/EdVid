@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.56.0",
+    "@prisma/client": "^6.12.0",
+    "bcryptjs": "^3.0.2",
     "next": "15.4.2",
     "next-auth": "^4.24.11",
     "react": "19.1.0",
@@ -23,6 +25,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "15.4.2",
+    "prisma": "^6.12.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

@@ -1,8 +1,14 @@
 import { Appbar } from "@/components/AppBar";
-export default function Home() {
+import NameModal from "@/components/NameModal";
+import { getServerSession } from "next-auth";
+import { Next_Auth } from "@/lib/auth";
+import { ExtendedUser } from "@/lib/auth"; 
+export default async function Home() {
+  const session = await getServerSession(Next_Auth);
+   const user = session?.user as ExtendedUser;
   return (
    <div className="text-2xl text-center text-red-300">
-    Ed Vid a simple tool that lets you create and share educational videos with ease.
+    {user && !user.name && <NameModal userId={user.id} />}
     <Appbar />
    </div>
   );
