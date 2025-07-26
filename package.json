@@ -12,6 +12,7 @@
     "@anthropic-ai/sdk": "^0.56.0",
     "@prisma/client": "^6.12.0",
     "bcryptjs": "^3.0.2",
+    "jsonrepair": "^3.13.0",
     "next": "15.4.2",
     "next-auth": "^4.24.11",
     "react": "19.1.0",
