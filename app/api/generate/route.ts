@@ -1,46 +1,46 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { SYSTEM_PROMPT, ENHANCED_USER, USER1, USER2} from '@/defults/prompt';
+import { SYSTEM_PROMPT, ENHANCED_USER, CINEMATIC_DIRECTION, SUBJECT_GUIDELINES } from '@/defults/prompt';
 import { NextRequest, NextResponse } from 'next/server';
+
 const anthropic = new Anthropic({
-    apiKey: process.env.ANTHROPIC_API_KEY
-})
+  apiKey: process.env.ANTHROPIC_API_KEY,
+});
 
-export async function POST(req: NextRequest, res: NextResponse){
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const userPrompt = body.prompt;
 
-    try{
-        const body = await req.json();
-        const userPrompt = body.prompt
-        if (!userPrompt) {
-            return new Response(JSON.stringify({ error: 'Prompt is required.' }), { status: 400 });
-        }
-        const PROMPT = ENHANCED_USER(userPrompt);
-        const stream = await anthropic.messages.stream({
-            model: 'claude-3-5-sonnet-20241022',
-            max_tokens: 3000,
-            system: SYSTEM_PROMPT,
-            messages: [
-              {role: 'user', content: `${USER1}`},
-              {role: 'user', content: `${USER2}`},
-              { role: 'user', content: `${PROMPT}` },
-            ],
-            temperature: 1.0,
-        });
+    if (!userPrompt) {
+      return NextResponse.json({ error: 'Prompt is required.' }, { status: 400 });
+    }
+
+    const PROMPT = ENHANCED_USER(userPrompt);
+
+    const stream = anthropic.messages.stream({
+      model: 'claude-opus-4-20250514',
+      max_tokens: 8000,
+      system: SYSTEM_PROMPT,
+      messages: [
+        { role: 'user', content: `${SUBJECT_GUIDELINES}` },
+        { role: 'user', content: `${CINEMATIC_DIRECTION}` },
+        { role: 'user', content: `${PROMPT}` },
+      ],
+      temperature: 1.0,
+    }).on('text', (text)=>{
+        console.log(text)
+    })
+
     let output = '';
 
-    stream.on('text', (text: string) => {
-      output += text;
-    });
+    for await (const message of stream) {
+      if (message.type === 'content_block_delta') {
+        output += (message.delta as {text : string})?.text || '';
+      }
+    }
 
-    return new Promise((resolve) => {
-      stream.on('end', () => {
-        resolve(NextResponse.json({ output }));
-      });
+    return NextResponse.json({ output });
 
-      stream.on('error', (err: any) => {
-        console.error('Streaming error:', err);
-        resolve(NextResponse.json({ error: 'Streaming failed.' }, { status: 500 }));
-      });
-    });
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: 'Something went wrong.' }, { status: 500 });
