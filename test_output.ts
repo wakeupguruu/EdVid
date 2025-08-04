@@ -20,7 +20,6 @@ function robustParseLLMOutput(rawObj: { output: string }): any[] | null {
     return `"${safe}"`;
   });
 
-  // Now, parse the string as JSON
   try {
     const parsed = JSON.parse(outputStr);
     return parsed;
