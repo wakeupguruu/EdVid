@@ -94,24 +94,21 @@ Your response must follow this exact JSON format:
 [
   {
     "scene": "Scene 1: [Descriptive Title]",
-    "code": "# Complete, runnable ManimGL Python code\nfrom manimlib import *\n\nclass SceneName(Scene):\n    def construct(self):\n        # Full implementation here",
-    "text": "Professional voiceover narration that synchronizes perfectly with the visual elements"
+    "code": "# Complete, runnable Manim Python code\nfrom manim import *\n\nclass SceneName(Scene):\n    def construct(self):\n        # Full implementation here",
   },
   {
     "scene": "Scene 2: [Next Concept]", 
     "code": "# Next complete code block",
-    "text": "Continued narration"
   }
 ]
 
 CRITICAL REQUIREMENTS:
-- Generate 8-15 self-contained scenes for comprehensive coverage
+- Generate at least 5 self-contained scenes for comprehensive coverage you can add more scenes if needed
 - Each scene must have complete, executable ManimGL code (no placeholders)
 - Use cinematic techniques: camera movements, zoom transitions, ambient lighting
 - Apply LaTeX formatting for mathematical expressions using proper syntax
 - Ensure visual hierarchy and prevent element overlap
 - Create smooth transitions between concepts
-- Include detailed voiceover that explains each visual element
 - Handle complex topics by breaking them into digestible segments
 - Use creative analogies and real-world examples
 - Maintain professional documentary-style narration throughout
@@ -164,7 +161,6 @@ Requirements:
 - Include mathematical derivations where applicable using LaTeX formatting
 - Show scale relationships (zoom from individual components to systems)
 - Use dynamic camera work and smooth transitions  
-- Provide synchronized narration that guides learning progression
 - Handle edge cases (visual clarity, element positioning, scene transitions)
 - Create memorable analogies and real-world connections
 - Ensure each scene builds logically on previous concepts

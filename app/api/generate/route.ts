@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
 
     const stream = anthropic.messages.stream({
       model: 'claude-opus-4-20250514',
-      max_tokens: 8000,
+      max_tokens: 20000,
       system: SYSTEM_PROMPT,
       messages: [
         { role: 'user', content: `${SUBJECT_GUIDELINES}` },
