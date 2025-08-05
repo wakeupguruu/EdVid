@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { SYSTEM_PROMPT, ENHANCED_USER, CINEMATIC_DIRECTION, SUBJECT_GUIDELINES } from '@/defults/prompt';
+import { SYSTEM_PROMPT, ENHANCED_USER } from '@/defults/prompt';
 import { NextRequest, NextResponse } from 'next/server';
 
 const anthropic = new Anthropic({
@@ -22,8 +22,6 @@ export async function POST(req: NextRequest) {
       max_tokens: 20000,
       system: SYSTEM_PROMPT,
       messages: [
-        { role: 'user', content: `${SUBJECT_GUIDELINES}` },
-        { role: 'user', content: `${CINEMATIC_DIRECTION}` },
         { role: 'user', content: `${PROMPT}` },
       ],
       temperature: 1.0,
