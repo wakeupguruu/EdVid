@@ -10,7 +10,7 @@ Open [http://localhost:3000/api/output](http://localhost:3000/api/ouput) for the
 
 The website is still in it's early stage. You can enter your own `ANTHROPIC_API_KEY` in .env and generate the output with postman, send the request on api/generate route with a topic of your choice in body.
 
-Then you can copy that output and paste it in test_output.ts in the root folder and run the file with `npx tsx test_output.ts` command it'll generate a json file `output.json` in output folder and then you visit api/output you will get whole code.
+Then you can copy that output and paste it in test_output.ts in the root folder and run the file with `npx tsx test_output.ts` command it'll generate a json file `output.json` in output folder and then you visit api/output you will get whole code or you can start working with the already generate json output in output.json
 
 To run the manim code in you local env you can follow the steps from [https://docs.manim.community/en/stable/index.html](https://docs.manim.community/en/stable/index.html) here.
 
