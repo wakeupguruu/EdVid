@@ -1,7 +1,9 @@
+import { config } from "dotenv";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import type { NextAuthOptions, User, Session, Account, Profile } from "next-auth";
 import type { JWT } from "next-auth/jwt";
+config({ path: "./db/.env" });
 import { PrismaClient } from "@/db/generated/prisma";
 import { compare, hash } from "bcryptjs";
 
