@@ -25,9 +25,9 @@ const dummyChats: { label: string; href: string }[] = [
 
 export default function FinalSideBar() {
   return (
-    <div className="peer md:w-0">
+    <div className="peer">
       <Sidebar animate>
-        <SidebarBody className="md:fixed md:inset-y-0 md:left-0 md:z-30">
+        <SidebarBody className="md:relative md:z-20">
           <div className="flex h-full flex-col justify-between">
           <div className="flex flex-col gap-2">
             <SidebarLink

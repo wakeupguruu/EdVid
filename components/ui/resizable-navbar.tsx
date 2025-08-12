@@ -26,9 +26,12 @@ interface NavItemsProps {
   items: {
     name: string;
     link: string;
+    icon?: React.ReactNode;
+    isDropdown?: boolean;
   }[];
   className?: string;
   onItemClick?: () => void;
+  ContactDropdownComponent?: React.ComponentType;
 }
 
 interface MobileNavProps {
@@ -113,33 +116,39 @@ export const NavBody = ({ children, className, visible }: NavBodyProps) => {
   );
 };
 
-export const NavItems = ({ items, className, onItemClick }: NavItemsProps) => {
+export const NavItems = ({ items, className, onItemClick, ContactDropdownComponent }: NavItemsProps) => {
   const [hovered, setHovered] = useState<number | null>(null);
 
   return (
     <motion.div
       onMouseLeave={() => setHovered(null)}
       className={cn(
-        "absolute inset-0 hidden flex-1 flex-row items-center justify-center space-x-2 text-sm font-medium text-zinc-600 transition duration-200 hover:text-zinc-800 lg:flex lg:space-x-2",
+        "absolute inset-0 hidden flex-1 flex-row items-center justify-center space-x-2 text-sm font-medium text-white transition duration-200 hover:text-gray-200 lg:flex lg:space-x-2",
         className,
       )}
     >
       {items.map((item, idx) => (
-        <a
-          onMouseEnter={() => setHovered(idx)}
-          onClick={onItemClick}
-          className="relative px-4 py-2 text-neutral-600 dark:text-neutral-300"
-          key={`link-${idx}`}
-          href={item.link}
-        >
-          {hovered === idx && (
-            <motion.div
-              layoutId="hovered"
-              className="absolute inset-0 h-full w-full rounded-full bg-gray-100 dark:bg-neutral-800"
-            />
+        <div key={`link-${idx}`} className="relative">
+          {item.isDropdown && ContactDropdownComponent ? (
+            <ContactDropdownComponent />
+          ) : (
+            <a
+              onMouseEnter={() => setHovered(idx)}
+              onClick={onItemClick}
+              className="relative px-4 py-2 text-white hover:text-gray-200 flex items-center gap-2"
+              href={item.link}
+            >
+              {hovered === idx && (
+                <motion.div
+                  layoutId="hovered"
+                  className="absolute inset-0 h-full w-full rounded-full bg-white/20 backdrop-blur-sm"
+                />
+              )}
+              {item.icon && <span className="relative z-20">{item.icon}</span>}
+              <span className="relative z-20">{item.name}</span>
+            </a>
           )}
-          <span className="relative z-20">{item.name}</span>
-        </a>
+        </div>
       ))}
     </motion.div>
   );
@@ -234,7 +243,7 @@ export const NavbarLogo = () => {
   return (
     <a
       href="#"
-      className="relative z-20 mr-4 flex items-center space-x-2 px-2 py-1 text-sm font-normal text-black"
+      className="relative z-20 mr-4 flex items-center space-x-2 px-2 py-1 text-sm font-normal text-white dark:text-white"
     >
       <img
         src="https://assets.aceternity.com/logo-dark.png"
@@ -242,7 +251,7 @@ export const NavbarLogo = () => {
         width={30}
         height={30}
       />
-      <span className="font-medium text-black dark:text-white">Startup</span>
+      <span className="font-medium text-white dark:text-white">EdVid</span>
     </a>
   );
 };
