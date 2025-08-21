@@ -10,10 +10,6 @@
 !.yarn/releases
 !.yarn/versions
 
-# testing
-/coverage
-/app/api/output
-
 # next.js
 /.next/
 /out/
@@ -40,3 +36,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+
+credentials.json
+service.json

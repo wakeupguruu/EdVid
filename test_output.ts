@@ -22,7 +22,7 @@ function robustParseLLMOutput(rawObj: { output: string }): any[] | null {
     const parsed = JSON.parse(outputStr);
     return parsed;
   } catch (err) {
-    console.error('❌ Failed to parse output:', err);
+    console.error('Failed to parse output:', err);
     return null;
   }
 }
@@ -33,9 +33,9 @@ async function main() {
   if (parsedOutput) {
     const outputPath = path.join(process.cwd(), 'app', 'api', 'output', 'output.json');
     await fs.writeFile(outputPath, JSON.stringify(parsedOutput, null, 2), 'utf-8');
-    console.log('✅ Output written to output/output.json');
+    console.log('Output written to output/output.json');
   } else {
-    console.error('❌ Failed to parse LLM output.');
+    console.error('Failed to parse LLM output.');
   }
 }
 

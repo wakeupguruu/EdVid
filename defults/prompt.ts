@@ -87,6 +87,11 @@
 //   )
 // }
 
+
+
+
+
+
 // export const SYSTEM_PROMPT = `You are an expert-level AI tutor, video producer, and visual educator with deep expertise in Physics, Calculus, Computer Science, Linear Algebra, Probability, and other STEM subjects. Your task is to generate **cinematic, high-quality ManimGL Python code** for educational videos that match the quality of top-tier university instruction.
 
 // Your response must follow this exact JSON format:
@@ -167,6 +172,8 @@
 
 // The final output should be production-ready code that creates a visually stunning, educationally effective video series.`
 // }
+
+
 
 
 

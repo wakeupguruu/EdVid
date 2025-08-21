@@ -26,12 +26,13 @@ model User {
 
   prompts   Prompt[]
   logs      ActivityLog[]
+  quota     UserQuota?
 }
 
 model Prompt {
   id               String        @id @default(cuid())
   inputText        String
-  content          String
+  rawOutput        String?
   status           PromptStatus  @default(pending)
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
@@ -70,9 +71,26 @@ model Video {
   id        String         @id @default(uuid())
   promptId  String         @unique
   createdAt DateTime       @default(now())
-
+  title String?
+  duration Int?
+  thumbnailUrl String?
+  videoUrl String?
+  processingStartedAt DateTime?
+  processingCompletedAt DateTime?
+  errorMessage String?
+  
+  status VideoStatus @default(queued)
   prompt    Prompt         @relation(fields: [promptId], references: [id])
   formats   VideoFormat[]
+  processingLogs VideoProcessingLog[]
+}
+
+enum VideoStatus {
+  queued
+  processing
+  completed
+  failed
+  cancelled
 }
 
 model VideoFormat {
@@ -97,4 +115,42 @@ model ActivityLog {
 
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   prompt    Prompt?  @relation(fields: [promptId], references: [id])
+}
+
+model UserQuota {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  monthlyPrompts Int     @default(10) // Videos per month
+  usedPrompts   Int     @default(0)   // How many used
+  monthlyVideoMinutes Int @default(60) // Total video time limit
+  usedVideoMinutes Int   @default(0)   // How much time used
+  resetDate     DateTime // When quota resets
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VideoProcessingLog {
+  id        String   @id @default(cuid())
+  videoId   String
+  stage     String   // "code_validation", "vm_setup", "execution", "rendering"
+  message   String
+  level     LogLevel @default(info) // info, warning, error
+  metadata  Json?    // Additional context
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  video     Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@index([videoId])
+  @@index([stage])
+  @@index([createdAt])
+}
+
+enum LogLevel {
+  info
+  warning
+  error
+  debug
 }
