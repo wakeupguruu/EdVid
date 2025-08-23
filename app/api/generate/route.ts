@@ -165,7 +165,7 @@ export async function POST(req: NextRequest) {
         metadata: { videoId: video.id, sceneCount: scenes.length, isContinuation: !!previousContext }
       }
     });
-
+  
     return NextResponse.json({ 
       success: true,
       promptId: prompt.id,

@@ -32,8 +32,6 @@ model User {
 model Prompt {
   id               String        @id @default(cuid())
   inputText        String
-  title            String?       // Chat session title
-  chatSessionId    String?       // Groups prompts into conversations
   rawOutput        String?
   content          String? 
   status           PromptStatus  @default(pending)
@@ -58,8 +56,6 @@ model Prompt {
   @@index([status])
   @@index([createdAt])
   @@index([userId, createdAt])
-  @@index([chatSessionId])
-  @@index([userId, chatSessionId])
 }
 
 model CodeSnippet {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Message, VideoData, GenerateResponse } from "@/types/chat";
 
 export function useChat() {
@@ -8,6 +8,7 @@ export function useChat() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentPromptId, setCurrentPromptId] = useState<string | null>(null);
+  const [currentChatId, setCurrentChatId] = useState<string | null>(null);
 
   const addMessage = useCallback((message: Omit<Message, "id" | "timestamp">) => {
     const newMessage: Message = {
@@ -25,6 +26,38 @@ export function useChat() {
         msg.id === id ? { ...msg, ...updates } : msg
       )
     );
+  }, []);
+
+  const loadChatSession = useCallback(async (chatId: string) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const response = await fetch(`/api/chats/${chatId}`);
+      if (!response.ok) {
+        throw new Error("Failed to load chat session");
+      }
+      
+      const data = await response.json();
+      setMessages(data.messages || []);
+      setCurrentChatId(chatId);
+      
+      // Set the current prompt ID to the last prompt in the session
+      if (data.lastPromptId) {
+        setCurrentPromptId(data.lastPromptId);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load chat session");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const startNewChat = useCallback(() => {
+    setMessages([]);
+    setCurrentPromptId(null);
+    setCurrentChatId(null);
+    setError(null);
   }, []);
 
   const sendMessage = useCallback(async (content: string) => {
@@ -92,6 +125,11 @@ export function useChat() {
 
       // Update current prompt ID for future continuations
       setCurrentPromptId(mockData.promptId);
+      
+      // Set current chat ID if this is a new chat
+      if (!currentChatId) {
+        setCurrentChatId(mockData.promptId);
+      }
 
       if (mockData.success) {
         const videoData: VideoData = {
@@ -130,12 +168,13 @@ export function useChat() {
     } finally {
       setIsLoading(false);
     }
-  }, [addMessage, updateMessage, currentPromptId]);
+  }, [addMessage, updateMessage, currentPromptId, currentChatId]);
 
   const clearMessages = useCallback(() => {
     setMessages([]);
     setError(null);
     setCurrentPromptId(null);
+    setCurrentChatId(null);
   }, []);
 
   return {
@@ -145,5 +184,8 @@ export function useChat() {
     sendMessage,
     clearMessages,
     currentPromptId,
+    currentChatId,
+    loadChatSession,
+    startNewChat,
   };
 }

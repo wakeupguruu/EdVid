@@ -16,6 +16,13 @@ Open [http://localhost:3000](http://localhost:3000) to use the EdVid chat interf
 - **Video Display**: After the simulated generation, view the existing video from `/public/merged/merged.mp4`
 - **Continue/Improve**: Extend existing videos with additional content and improvements
 
+### Chat History & Sessions
+- **Persistent Chat History**: All conversations are saved and accessible from the sidebar
+- **Session Management**: Each chat session is automatically created and tracked
+- **Smart Navigation**: Click on any previous chat to continue the conversation
+- **New Chat Button**: Start fresh conversations with the "New Chat" button
+- **Real-time Updates**: Chat status and video generation progress are shown in real-time
+
 ### Video Continuation System
 - **Smart Context Tracking**: System remembers previous video content and context
 - **Database Integration**: Uses PostgreSQL to store video generation history
@@ -60,10 +67,10 @@ Use the `/merge` page to combine multiple videos with transitions:
 
 ## Database Schema
 
-The system uses a sophisticated database schema for video continuation:
+The system uses a sophisticated database schema for chat history and video continuation:
 
 ```sql
--- Prompt table with continuation support
+-- Prompt table with chat session support
 model Prompt {
   id               String        @id @default(cuid())
   inputText        String        -- User's prompt
@@ -72,6 +79,16 @@ model Prompt {
   // ... other fields
 }
 ```
+
+## API Endpoints
+
+### Chat Management
+- `GET /api/chats` - Fetch user's chat history
+- `GET /api/chats/[chatId]` - Fetch specific chat messages
+
+### Video Generation
+- `POST /api/generate` - Generate video from prompt (supports continuation)
+- `POST /api/output` - Merge video files with transitions
 
 ## Development
 
