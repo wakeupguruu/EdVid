@@ -59,11 +59,7 @@ For actual video generation, you can still use the manual process:
 5. Run Manim locally: `manim -pqh video.py SceneName --format=mp4`
 
 ### Video Merging
-Use the `/merge` page to combine multiple videos with transitions:
-- Upload video files
-- Choose transition effects (fade, wipe, slide)
-- Set transition duration
-- Download the merged video
+Video merging is handled automatically by the backend via `/api/output` endpoint. This utility combines individual scene videos into a complete educational video with smooth transitions.
 
 ## Database Schema
 
@@ -98,5 +94,3 @@ The project uses:
 - Prisma with PostgreSQL
 - NextAuth for authentication
 - Manim Community Edition for video generation
-
-I'll continue to automate the whole process and build better backend services.
