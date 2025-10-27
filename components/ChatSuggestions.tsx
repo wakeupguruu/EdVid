@@ -54,7 +54,7 @@ export function ChatSuggestions({ onSuggestionClick, disabled = false }: ChatSug
             <Button
               key={suggestion.text}
               variant="outline"
-              size="sm"
+              // size="sm"
               className="h-auto p-3 flex flex-col items-center gap-1 text-xs"
               onClick={() => onSuggestionClick(suggestion.text)}
               disabled={disabled}
