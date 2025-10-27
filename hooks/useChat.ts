@@ -30,6 +30,7 @@ export function useChat() {
 
   const loadChatSession = useCallback(async (chatId: string) => {
     try {
+      console.log("Loading chat session:", chatId);
       setIsLoading(true);
       setError(null);
       
@@ -39,6 +40,7 @@ export function useChat() {
       }
       
       const data = await response.json();
+      console.log("Loaded chat data:", data);
       setMessages(data.messages || []);
       setCurrentChatId(chatId);
       
@@ -47,6 +49,7 @@ export function useChat() {
         setCurrentPromptId(data.lastPromptId);
       }
     } catch (err) {
+      console.error("Error loading chat session:", err);
       setError(err instanceof Error ? err.message : "Failed to load chat session");
     } finally {
       setIsLoading(false);
@@ -54,6 +57,7 @@ export function useChat() {
   }, []);
 
   const startNewChat = useCallback(() => {
+    console.log("Starting new chat...");
     setMessages([]);
     setCurrentPromptId(null);
     setCurrentChatId(null);
@@ -82,60 +86,57 @@ export function useChat() {
     setIsLoading(true);
 
     try {
-      // Simulate API call with a timer instead of actual request
-      // const response = await fetch("/api/generate", {
-      //   method: "POST",
-      //   headers: {
-      //     "Content-Type": "application/json",
-      //   },
-      //   body: JSON.stringify({ 
-      //     prompt: content.trim(),
-      //     previousPromptId: currentPromptId // Include previous prompt ID for continuation
-      //   }),
-      // });
+      // Make actual API call to generate endpoint
+      const response = await fetch("/api/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ 
+          prompt: content.trim(),
+          previousPromptId: currentPromptId // Include previous prompt ID for continuation
+        }),
+      });
 
-      // Simulate processing time (3-5 seconds)
-      const processingTime = Math.random() * 2000 + 3000; // 3-5 seconds
-      
+      // Check if response is ok
+      if (!response.ok) {
+        throw new Error("Failed to generate video");
+      }
+
+      const data: GenerateResponse = await response.json();
+      console.log("API Response:", data);
+
       // Update message to show progress
       updateMessage(assistantMessage.id, {
         content: "Processing your request... This will take a few moments.",
         isGenerating: true,
       });
 
-      await new Promise(resolve => setTimeout(resolve, processingTime / 2));
+      // Simulate some progress display
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       updateMessage(assistantMessage.id, {
         content: "Generating video scenes and animations...",
         isGenerating: true,
       });
 
-      await new Promise(resolve => setTimeout(resolve, processingTime / 2));
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // Simulate successful response
       const isContinuation = !!currentPromptId;
-      const mockData: GenerateResponse = {
-        success: true,
-        promptId: `prompt_${Date.now()}`,
-        videoId: `video_${Date.now()}`,
-        sceneCount: Math.floor(Math.random() * 8) + 5, // 5-12 scenes
-        error: undefined,
-        isContinuation,
-      };
 
       // Update current prompt ID for future continuations
-      setCurrentPromptId(mockData.promptId);
+      setCurrentPromptId(data.promptId);
       
       // Set current chat ID if this is a new chat
       if (!currentChatId) {
-        setCurrentChatId(mockData.promptId);
+        setCurrentChatId(data.promptId);
       }
 
-      if (mockData.success) {
+      if (data.success) {
         const videoData: VideoData = {
-          videoId: mockData.videoId,
-          promptId: mockData.promptId,
-          sceneCount: mockData.sceneCount,
+          videoId: data.videoId,
+          promptId: data.promptId,
+          sceneCount: data.sceneCount,
           status: "completed", // Mark as completed since we're showing existing video
           isContinuation,
           previousPromptId: currentPromptId || undefined,
@@ -143,8 +144,8 @@ export function useChat() {
 
         // Update assistant message with success response and video
         const continuationText = isContinuation 
-          ? `Perfect! I've extended your video with ${mockData.sceneCount} additional scenes. Here's your enhanced video:`
-          : `Perfect! I've created a comprehensive educational video with ${mockData.sceneCount} scenes covering your topic. Here's your video:`;
+          ? `Perfect! I've extended your video with ${data.sceneCount} additional scenes. Here's your enhanced video:`
+          : `Perfect! I've created a comprehensive educational video with ${data.sceneCount} scenes covering your topic. Here's your video:`;
 
         updateMessage(assistantMessage.id, {
           content: continuationText,
@@ -152,7 +153,7 @@ export function useChat() {
           videoData,
         });
       } else {
-        throw new Error(mockData.error || "Generation failed");
+        throw new Error(data.error || "Generation failed");
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred";
