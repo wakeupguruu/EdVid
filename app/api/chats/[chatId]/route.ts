@@ -38,7 +38,15 @@ export async function GET(
     let currentPrompt: any = rootPrompt;
 
     while (currentPrompt) {
-      allPrompts.push(currentPrompt);
+      // Fetch the prompt with its video data
+      const promptWithVideo = await prisma.prompt.findUnique({
+        where: { id: currentPrompt.id },
+        include: { video: true },
+      });
+      
+      if (promptWithVideo) {
+        allPrompts.push(promptWithVideo);
+      }
       
       // Find the next prompt in the chain
       const nextPrompt = await prisma.prompt.findFirst({
@@ -53,20 +61,33 @@ export async function GET(
     }
 
     // Convert prompts to messages format
-    const messages = allPrompts.map((prompt, index) => ({
-      id: prompt.id,
-      role: 'user' as const,
-      content: prompt.inputText,
-      timestamp: prompt.createdAt,
-      videoData: prompt.video ? {
-        videoId: prompt.video.id,
-        promptId: prompt.id,
-        sceneCount: 0, // We'll need to parse this from content
-        status: prompt.video.status,
-        isContinuation: index > 0,
-        previousPromptId: prompt.previousPromptId,
-      } : undefined,
-    }));
+    const messages = allPrompts.map((prompt, index) => {
+      // Parse scene count from content
+      let sceneCount = 0;
+      try {
+        if (prompt.content) {
+          const scenes = JSON.parse(prompt.content);
+          sceneCount = Array.isArray(scenes) ? scenes.length : 0;
+        }
+      } catch (e) {
+        console.error('Error parsing prompt content for scene count:', e);
+      }
+
+      return {
+        id: prompt.id,
+        role: 'user' as const,
+        content: prompt.inputText,
+        timestamp: prompt.createdAt,
+        videoData: prompt.video ? {
+          videoId: prompt.video.id,
+          promptId: prompt.id,
+          sceneCount: sceneCount,
+          status: prompt.video.status,
+          isContinuation: index > 0,
+          previousPromptId: prompt.previousPromptId,
+        } : undefined,
+      };
+    });
 
     // Add assistant responses
     const assistantMessages = allPrompts.map((prompt, index) => {
