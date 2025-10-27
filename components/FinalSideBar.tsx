@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, forwardRef, useImperativeHandle } from "react";
 import {
   Sidebar,
   SidebarBody,
@@ -34,7 +34,11 @@ interface FinalSideBarProps {
   currentChatId?: string | null;
 }
 
-export default function FinalSideBar({ onNewChat, onLoadChat, currentChatId }: FinalSideBarProps) {
+interface FinalSideBarRef {
+  refreshChats: () => void;
+}
+
+const FinalSideBar = forwardRef<FinalSideBarRef, FinalSideBarProps>(({ onNewChat, onLoadChat, currentChatId }, ref) => {
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -67,13 +71,22 @@ export default function FinalSideBar({ onNewChat, onLoadChat, currentChatId }: F
     fetchChatHistory();
   }, []);
 
-  const handleNewChat = () => {
+  // Expose refresh function to parent component
+  useImperativeHandle(ref, () => ({
+    refreshChats: fetchChatHistory,
+  }));
+
+  const handleNewChat = (e: React.MouseEvent) => {
+    e.preventDefault();
+    console.log("New chat button clicked");
     if (onNewChat) {
       onNewChat();
     }
   };
 
-  const handleChatClick = (chatId: string) => {
+  const handleChatClick = (e: React.MouseEvent, chatId: string) => {
+    e.preventDefault();
+    console.log("Chat clicked:", chatId);
     if (onLoadChat) {
       onLoadChat(chatId);
     }
@@ -148,7 +161,7 @@ export default function FinalSideBar({ onNewChat, onLoadChat, currentChatId }: F
                                        chatSessions.map((chat) => (
                        <button
                          key={chat.id}
-                         onClick={() => handleChatClick(chat.id)}
+                         onClick={(e) => handleChatClick(e, chat.id)}
                          className={`flex items-center justify-start gap-2 group/sidebar py-2 truncate text-left w-full ${
                            currentChatId === chat.id ? 'bg-blue-50 dark:bg-blue-900/20' : ''
                          }`}
@@ -198,6 +211,10 @@ export default function FinalSideBar({ onNewChat, onLoadChat, currentChatId }: F
       </Sidebar>
     </div>
   );
-}
+});
+
+FinalSideBar.displayName = "FinalSideBar";
+
+export default FinalSideBar;
 
 
