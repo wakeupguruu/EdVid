@@ -5,6 +5,8 @@ import { PrismaClient } from '@/db/generated/prisma';
 import { getServerSession } from 'next-auth';
 import { Next_Auth } from '@/lib/auth';
 import { ExtendedUser } from '@/lib/auth';
+import { validators, ValidationErrors } from '@/lib/validation';
+import { logger } from '@/lib/logger';
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -25,6 +27,20 @@ export async function POST(req: NextRequest) {
     const userPrompt = body.prompt;
     const previousPromptId = body.previousPromptId; // For continuation requests
 
+
+    try{
+      validators.prompt(userPrompt);
+    } catch(error){
+        if(error instanceof ValidationErrors){
+            logger.warn('Validation Failed', {errors: error.errors});
+            return NextResponse.json({
+                error: "Invalid Input",
+                errors: error.errors,
+            }, {status: 400});
+        } else {
+            throw error;
+        }
+    }
     if (!userPrompt) {
       return NextResponse.json({ error: 'Prompt is required.' }, { status: 400 });
     }
@@ -102,6 +118,8 @@ export async function POST(req: NextRequest) {
       // If parsing fails, log the error and return a meaningful response
       throw new Error(`Failed to parse API response as valid JSON. Response: ${output.substring(0, 500)}`);
     }
+
+
     const sceneCount = scenes.length;
    
     await prisma.prompt.update({
@@ -158,7 +176,45 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
-    return NextResponse.json({ error: errorMessage }, { status: 500 });
+    // Handle Validation Errors
+    if(error instanceof ValidationErrors){
+      logger.warn('Validation Failed', {errors: error.errors});
+      return NextResponse.json({
+        error: "Invalid Input",
+        errors: error.errors,
+      }, {status: 400});
+    }
+    
+    //Handle Anthropic API Errors
+    if(error instanceof Error){
+      if(error.message.includes('API')){
+        logger.error('Anthropic API Error', {message: error.message});
+        return NextResponse.json({
+          error: "Failed to generate Video Script, Please check your API key and try again",
+          code: "ANTHROPIC_API_ERROR",
+          details: error.message,
+        }, {status: 503});
+      }
+
+      if(error.message.includes('JSON')){
+        
+        logger.error('JSON Parsing Error',{message: error.message});
+
+        return NextResponse.json({
+          error: "Failed to parse video script from response",
+          code: "JSON_PARSING_ERROR",
+          details: error.message,
+        }, {status: 500});
+      }
+
+      logger.error('Unknown Error', {message: error.message});
+      return NextResponse.json({
+        error: "Unknown Error",
+        code: "UNKNOWN_ERROR",
+        details: error.message,
+      }, {status: 500});
+
+
+    }
   }
 }

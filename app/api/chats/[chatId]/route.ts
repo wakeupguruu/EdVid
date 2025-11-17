@@ -3,6 +3,8 @@ import { PrismaClient } from '@/db/generated/prisma';
 import { getServerSession } from 'next-auth';
 import { Next_Auth } from '@/lib/auth';
 import { ExtendedUser } from '@/lib/auth';
+import { validators, ValidationErrors } from '@/lib/validation';
+import { logger } from '@/lib/logger';
 
 const prisma = new PrismaClient();
 
@@ -18,60 +20,85 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
     }
 
-    const chatId = params.chatId;
+    // Validate chatId format
+    let validatedChatId: string;
+    try {
+      validatedChatId = validators.id(params.chatId);
+    } catch (error) {
+      if (error instanceof ValidationErrors) {
+        logger.warn('Invalid Chat ID format', { errors: error.errors });
+        return NextResponse.json({
+          error: 'Invalid Chat ID format',
+          errors: error.errors,
+          code: 'INVALID_CHAT_ID'
+        }, { status: 400 });
+      }
+      throw error;
+    }
 
-    // Get the root prompt and verify ownership
-    const rootPrompt = await prisma.prompt.findFirst({
+    // OPTIMIZATION: Fetch entire chat chain in one query with proper ordering
+    const allPrompts = await prisma.prompt.findMany({
       where: {
-        id: chatId,
         userId: user.id,
         deletedAt: null,
+        // Chain finder: either is root (no previous) or connects to root
+        OR: [
+          { id: validatedChatId },
+          { previousPromptId: validatedChatId },
+        ]
+      },
+      include: {
+        video: true,
+      },
+      orderBy: {
+        createdAt: 'asc', // Chronological order
       },
     });
 
+    if (!allPrompts.length) {
+      logger.warn('Chat not found', { chatId: validatedChatId, userId: user.id });
+      return NextResponse.json({ 
+        error: 'Chat not found.',
+        code: 'CHAT_NOT_FOUND'
+      }, { status: 404 });
+    }
+
+    // Build chain recursively - get full conversation thread
+    const rootPrompt = allPrompts.find(p => p.id === validatedChatId);
     if (!rootPrompt) {
-      return NextResponse.json({ error: 'Chat not found.' }, { status: 404 });
+      logger.warn('Root prompt not found in chat chain', { chatId: validatedChatId });
+      return NextResponse.json({ 
+        error: 'Chat not found.',
+        code: 'CHAT_NOT_FOUND'
+      }, { status: 404 });
     }
 
-    // Get all prompts in this chat session (the chain)
-    const allPrompts: any[] = [];
-    let currentPrompt: any = rootPrompt;
+    // Fetch full conversation chain (handle deep nesting)
+    const fullChain: any[] = [rootPrompt];
+    let currentId = rootPrompt.id;
+    
+    while (true) {
+      const nextPrompt = allPrompts.find(p => p.previousPromptId === currentId);
+      if (!nextPrompt) break;
+      fullChain.push(nextPrompt);
+      currentId = nextPrompt.id;
+    }
 
-    while (currentPrompt) {
-      // Fetch the prompt with its video data
-      const promptWithVideo = await prisma.prompt.findUnique({
-        where: { id: currentPrompt.id },
-        include: { video: true },
-      });
-      
-      if (promptWithVideo) {
-        allPrompts.push(promptWithVideo);
+    // Helper function: safely parse JSON scenes
+    const parseScenes = (content: string | null): any[] => {
+      if (!content) return [];
+      try {
+        const parsed = JSON.parse(content);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (e) {
+        logger.warn('Failed to parse prompt content', { contentLength: content?.length });
+        return [];
       }
-      
-      // Find the next prompt in the chain
-      const nextPrompt = await prisma.prompt.findFirst({
-        where: {
-          previousPromptId: currentPrompt.id,
-          userId: user.id,
-          deletedAt: null,
-        },
-      });
-      
-      currentPrompt = nextPrompt;
-    }
+    };
 
     // Convert prompts to messages format
-    const messages = allPrompts.map((prompt, index) => {
-      // Parse scene count from content
-      let sceneCount = 0;
-      try {
-        if (prompt.content) {
-          const scenes = JSON.parse(prompt.content);
-          sceneCount = Array.isArray(scenes) ? scenes.length : 0;
-        }
-      } catch (e) {
-        console.error('Error parsing prompt content for scene count:', e);
-      }
+    const messages = fullChain.map((prompt, index) => {
+      const scenes = parseScenes(prompt.content);
 
       return {
         id: prompt.id,
@@ -81,7 +108,7 @@ export async function GET(
         videoData: prompt.video ? {
           videoId: prompt.video.id,
           promptId: prompt.id,
-          sceneCount: sceneCount,
+          sceneCount: scenes.length,
           status: prompt.video.status,
           isContinuation: index > 0,
           previousPromptId: prompt.previousPromptId,
@@ -90,42 +117,30 @@ export async function GET(
     });
 
     // Add assistant responses
-    const assistantMessages = allPrompts.map((prompt, index) => {
-      if (prompt.status === 'completed' && prompt.content) {
-        try {
-          const scenes = JSON.parse(prompt.content);
-          return {
-            id: `${prompt.id}_assistant`,
-            role: 'assistant' as const,
-            content: index === 0 
-              ? `Perfect! I've created a comprehensive educational video with ${scenes.length} scenes covering your topic. Here's your video:`
-              : `Perfect! I've extended your video with ${scenes.length} additional scenes. Here's your enhanced video:`,
-            timestamp: prompt.completedAt || prompt.updatedAt,
-            videoData: {
-              videoId: prompt.video?.id || `video_${prompt.id}`,
-              promptId: prompt.id,
-              sceneCount: scenes.length,
-              status: 'completed',
-              isContinuation: index > 0,
-              previousPromptId: prompt.previousPromptId,
-            },
-          };
-        } catch (e) {
-          return {
-            id: `${prompt.id}_assistant`,
-            role: 'assistant' as const,
-            content: 'Video generation completed.',
-            timestamp: prompt.completedAt || prompt.updatedAt,
-            videoData: {
-              videoId: prompt.video?.id || `video_${prompt.id}`,
-              promptId: prompt.id,
-              sceneCount: 0,
-              status: 'completed',
-              isContinuation: index > 0,
-              previousPromptId: prompt.previousPromptId,
-            },
-          };
+    const assistantMessages = fullChain.map((prompt, index) => {
+      if (prompt.status === 'completed') {
+        const scenes = parseScenes(prompt.content);
+        
+        if (scenes.length === 0) {
+          return null; // Skip if no scenes
         }
+
+        return {
+          id: `${prompt.id}_assistant`,
+          role: 'assistant' as const,
+          content: index === 0 
+            ? `Perfect! I've created a comprehensive educational video with ${scenes.length} scenes covering your topic. Here's your video:`
+            : `Perfect! I've extended your video with ${scenes.length} additional scenes. Here's your enhanced video:`,
+          timestamp: prompt.completedAt || prompt.updatedAt,
+          videoData: {
+            videoId: prompt.video?.id || `video_${prompt.id}`,
+            promptId: prompt.id,
+            sceneCount: scenes.length,
+            status: 'completed',
+            isContinuation: index > 0,
+            previousPromptId: prompt.previousPromptId,
+          },
+        };
       }
       return null;
     }).filter(Boolean);
@@ -141,13 +156,42 @@ export async function GET(
 
     return NextResponse.json({
       success: true,
-      chatId,
+      chatId: validatedChatId,
       messages: allMessages,
-      lastPromptId: allPrompts[allPrompts.length - 1]?.id,
+      lastPromptId: fullChain[fullChain.length - 1]?.id,
+      totalMessages: allMessages.length,
+      code: 'CHAT_FETCHED'
     });
 
   } catch (error) {
-    console.error('Error fetching chat session:', error);
-    return NextResponse.json({ error: 'Failed to fetch chat session.' }, { status: 500 });
+    // Handle validation errors
+    if (error instanceof ValidationErrors) {
+      logger.warn('Validation failed in chat route', { errors: error.errors });
+      return NextResponse.json({ 
+        error: 'Invalid input',
+        errors: error.errors,
+        code: 'VALIDATION_ERROR'
+      }, { status: 400 });
+    }
+
+    // Handle database errors
+    if (error instanceof Error) {
+      logger.error('Error fetching chat session', { 
+        message: error.message,
+        stack: error.stack
+      });
+      
+      return NextResponse.json({ 
+        error: 'Failed to fetch chat session.',
+        code: 'CHAT_FETCH_ERROR',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      }, { status: 500 });
+    }
+
+    logger.error('Unknown error in chat route');
+    return NextResponse.json({ 
+      error: 'Failed to fetch chat session.',
+      code: 'UNKNOWN_ERROR'
+    }, { status: 500 });
   }
 }

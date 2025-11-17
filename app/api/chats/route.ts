@@ -3,17 +3,21 @@ import { PrismaClient } from '@/db/generated/prisma';
 import { getServerSession } from 'next-auth';
 import { Next_Auth } from '@/lib/auth';
 import { ExtendedUser } from '@/lib/auth';
-
+import {logger} from '@/lib/logger';
+import { validators, ValidationErrors } from '@/lib/validation';
 const prisma = new PrismaClient();
 
 export async function GET(req: NextRequest) {
+  let validatedChatId: string;
   try {
     const session = await getServerSession(Next_Auth);
     const user = session?.user as ExtendedUser;
 
+
     if (!user || !user.id) {
       return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
     }
+
 
     // Get all prompts for the user, grouped by chat sessions
     const prompts = await prisma.prompt.findMany({
@@ -87,6 +91,12 @@ export async function GET(req: NextRequest) {
     });
 
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to fetch chat history.' }, { status: 500 });
+    logger.error('Error fetching chat history', { 
+    error: error instanceof Error ? error.message : 'Unknown error' 
+  });
+  return NextResponse.json({ 
+    error: 'Failed to fetch chat history.',
+    code: 'CHAT_FETCH_ERROR'
+  }, { status: 500 });
   }
 }
