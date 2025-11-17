@@ -7,6 +7,7 @@ import { Next_Auth } from '@/lib/auth';
 import { ExtendedUser } from '@/lib/auth';
 import { validators, ValidationErrors } from '@/lib/validation';
 import { logger } from '@/lib/logger';
+import { executeManifAsync } from '@/lib/manim';
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -133,18 +134,21 @@ export async function POST(req: NextRequest) {
       }
     });
 
+    const pythonCode = scenes.map((s: any) => s.code).join('\n\n');
+
     const codeSnippet = await prisma.codeSnippet.create({
       data: {
         promptId: prompt.id,
-        code: scenes.map((s: any) => s.code).join('\n\n'),
+        code: pythonCode,
         language: "python"
       }
     });
 
+    // Create video with "processing" status
     const video = await prisma.video.create({
       data: {
         promptId: prompt.id,
-        status: "completed",
+        status: "processing",
         title: scenes[0]?.scene || "Generated Video"
       }
     });
@@ -152,8 +156,8 @@ export async function POST(req: NextRequest) {
     await prisma.videoProcessingLog.create({
       data: {
         videoId: video.id,
-        stage: "completed",
-        message: previousContext ? "Video continuation completed" : "Video generation completed",
+        stage: "queued",
+        message: "Video sent to Manim execution service",
         level: "info"
       }
     });
@@ -166,13 +170,20 @@ export async function POST(req: NextRequest) {
         metadata: { videoId: video.id, sceneCount: scenes.length, isContinuation: !!previousContext }
       }
     });
+
+    // Send to Manim service asynchronously (don't wait for response)
+    // The Manim service will upload to Cloudinary and send webhook when ready
+    executeManifAsync(video.id, pythonCode, 'l').catch(error => {
+      logger.error('Failed to queue Manim execution', { videoId: video.id, error });
+    });
   
     return NextResponse.json({ 
       success: true,
       promptId: prompt.id,
       videoId: video.id,
       sceneCount: sceneCount,
-      isContinuation: !!previousContext
+      isContinuation: !!previousContext,
+      message: "Video processing started. You'll receive a notification when ready."
     });
 
   } catch (error) {
