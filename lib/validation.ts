@@ -47,5 +47,22 @@ export const validators = {
         ]);
         }
         return id;
+    },
+
+    email: (email: string): string =>{
+        if( typeof email != "string" || email.trim().length === 0){
+            throw new ValidationErrors([
+                {field: "email", message: "Email must be a non_empty string"}
+            ])
+        }
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if(!emailRegex.test(email)){
+            throw new ValidationErrors([
+                {field: "email", message: "Invalid email format"}
+            ])
+        }
+
+        return email.toLowerCase().trim();
     }
 };
