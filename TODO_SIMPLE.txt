@@ -1,0 +1,54 @@
+EDVID - REMAINING WORK TODO LIST
+==================================
+
+Phase 1: Video Generation (PRIORITY 1)
+[ ] Create /lib/manim.ts - Manim execution wrapper
+[ ] Create /app/api/generate/video/route.ts - Video generation endpoint
+[ ] Install Manim locally and test
+[ ] Update Video model with url, fileSize, duration fields
+[ ] Handle Manim execution errors
+
+Phase 2: Cloud Storage (PRIORITY 2)
+[ ] Choose cloud provider (recommend Cloudinary)
+[ ] Setup cloud credentials in .env
+[ ] Create /lib/storage.ts - Upload utilities
+[ ] Create /app/api/upload/route.ts - Upload endpoint
+[ ] Test file upload and retrieval
+
+Phase 3: Frontend Video Display (PRIORITY 3)
+[ ] Create <VideoPlayer /> component
+[ ] Add video loading state in chat
+[ ] Build download button component
+[ ] Handle video playback errors
+
+Phase 4: Download Feature (PRIORITY 4)
+[ ] Create /app/api/videos/:videoId/download/route.ts
+[ ] Stream video with proper headers
+[ ] Test download functionality
+
+Phase 5: Background Jobs (PRIORITY 5 - Optional)
+[ ] Setup Redis
+[ ] Install Bull/BullMQ
+[ ] Create video processing worker
+[ ] Update generate route to queue jobs instead of waiting
+
+Phase 6: Optimizations (PRIORITY 6)
+[ ] Implement caching strategy
+[ ] Add rate limiting (use existing UserQuota model)
+[ ] Database query optimization
+[ ] Add performance monitoring
+
+Phase 7: Deployment (PRIORITY 7)
+[ ] Push code to GitHub
+[ ] Deploy to Vercel
+[ ] Setup GitHub Actions CI/CD
+[ ] Configure custom domain
+
+Phase 8: Testing & Polish (PRIORITY 8)
+[ ] End-to-end testing
+[ ] Error scenario testing
+[ ] Load testing
+[ ] Security audit
+
+---
+Start with Phase 1. Good luck! 🚀
