@@ -135,8 +135,8 @@ export async function POST(req: NextRequest) {
 
 		return NextResponse.json({ url: publicUrl, files: inputFiles });
 	} catch (err: any) {
-		console.error("/api/output error", err);
-		return NextResponse.json({ error: "Failed to merge videos", details: String(err?.message || err) }, { status: 500 });
+		const errorMessage = err instanceof Error ? err.message : 'An error occurred during merging';
+		return NextResponse.json({ error: "Failed to merge videos", details: errorMessage }, { status: 500 });
 	}
 }
 

@@ -87,7 +87,6 @@ export async function GET(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error fetching chat history:', error);
     return NextResponse.json({ error: 'Failed to fetch chat history.' }, { status: 500 });
   }
 }

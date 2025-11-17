@@ -30,7 +30,6 @@ export function useChat() {
 
   const loadChatSession = useCallback(async (chatId: string) => {
     try {
-      console.log("Loading chat session:", chatId);
       setIsLoading(true);
       setError(null);
       
@@ -40,7 +39,6 @@ export function useChat() {
       }
       
       const data = await response.json();
-      console.log("Loaded chat data:", data);
       setMessages(data.messages || []);
       setCurrentChatId(chatId);
       
@@ -57,7 +55,6 @@ export function useChat() {
   }, []);
 
   const startNewChat = useCallback(() => {
-    console.log("Starting new chat...");
     setMessages([]);
     setCurrentPromptId(null);
     setCurrentChatId(null);
@@ -104,7 +101,6 @@ export function useChat() {
       }
 
       const data: GenerateResponse = await response.json();
-      console.log("API Response:", data);
 
       // Update message to show progress
       updateMessage(assistantMessage.id, {

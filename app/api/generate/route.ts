@@ -66,93 +66,42 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    // Simulate API call with a timer instead of actual request
-    // TODO: Uncomment when you have ANTHROPIC_API_KEY
-    // const PROMPT = previousContext 
-    //   ? ENHANCED_USER_CONTINUATION(userPrompt, previousContext)
-    //   : ENHANCED_USER(userPrompt);
+    // Call Anthropic API to generate video scripts
+    const PROMPT = previousContext 
+      ? ENHANCED_USER_CONTINUATION(userPrompt, previousContext)
+      : ENHANCED_USER(userPrompt);
 
-    // const stream = anthropic.messages.stream({
-    //   model: 'claude-opus-4-20250514',
-    //   max_tokens: 20000,
-    //   system: previousContext ? SYSTEM_PROMPT_CONTINUATION : SYSTEM_PROMPT,
-    //   messages: [
-    //     { role: 'user', content: `${PROMPT}` },
-    //   ],
-    //   temperature: 1.0,
-    // }).on('text', (text)=>{
-    //     console.log(text)
-    // })
+    const stream = anthropic.messages.stream({
+      model: 'claude-opus-4-20250514',
+      max_tokens: 20000,
+      system: previousContext ? SYSTEM_PROMPT_CONTINUATION : SYSTEM_PROMPT,
+      messages: [
+        { role: 'user', content: `${PROMPT}` },
+      ],
+      temperature: 1.0,
+    });
 
-    // let output = '';
+    let output = '';
 
-    // for await (const message of stream) {
-    //   if (message.type === 'content_block_delta') {
-    //     output += (message.delta as {text : string})?.text || '';
-    //   }
-    // }
+    for await (const message of stream) {
+      if (message.type === 'content_block_delta') {
+        output += (message.delta as {text : string})?.text || '';
+      }
+    }
 
-    // Simulate processing time (3-5 seconds)
-    const processingTime = Math.random() * 2000 + 3000;
-    await new Promise(resolve => setTimeout(resolve, processingTime));
-
-    // Simulate successful response
+    // Parse the output
     let mockOutput: string;
     let scenes: any[];
     
-    if (previousContext) {
-      try {
-        const previousScenes = JSON.parse(previousContext.content || '[]');
-        const nextSceneNumber = previousScenes.length + 1;
-        const basePrompt = previousContext.originalPrompt;
-        console.log('mockoutput 1');
-        // Generate continuation scenes based on user's improvement request
-       mockOutput = `[
-        {
-          "scene": "Scene 1: Introduction to ",
-          "code": "from manim import *\\n\\nclass IntroductionScene(Scene):\\n\\tdef construct(self):\\n\\t\\taxes = Axes(x_range=[-5, 5], y_range=[-3, 3])\\n\\t\\ttitle = Text('secene 1', font_size=40, color=GOLD)\\n\\t\\tsubtitle = Text('Comprehensive Guide', font_size=24, color=BLUE)\\n\\t\\tself.play(Write(title))\\n\\t\\tself.play(FadeIn(subtitle))\\n\\t\\tself.wait(2)\\n\\t\\tself.play(Create(axes))\\n\\t\\tself.wait(1)"
-        },
-        {
-          "scene": "Scene 2: Basic Concepts of ",
-          "code": "from manim import *\\n\\nclass BasicConceptsScene(Scene):\\n\\tdef construct(self):\\n\\t\\tcircle = Circle(radius=1.5, color=GREEN)\\n\\t\\tsquare = Square(side_length=2, color=RED)\\n\\t\\ttriangle = Polygon([0, 1.5, 0], [-0.5, -0.5, 0], [0.5, -0.5, 0], color=BLUE)\\n\\t\\tself.play(Create(circle), Create(square), Create(triangle))\\n\\t\\tself.wait(2)\\n\\t\\tlabel = Text('Exploring', font_size=24)\\n\\t\\tlabel.to_edge(UP)\\n\\t\\tself.play(Write(label))\\n\\t\\tself.wait(2)"
-        },
-        {
-          "scene": "Scene 3: Advanced ",
-          "code": "from manim import *\\n\\nclass AdvancedScene(Scene):\\n\\tdef construct(self):\\n\\t\\tequation = MathTex(r\\\"f(x) = x^2 + 2x + 1\\\", font_size=48, color=YELLOW)\\n\\t\\tgraph = Axes(x_range=[-4, 2], y_range=[-1, 10]).plot(lambda x: x**2 + 2*x + 1, color=GREEN)\\n\\t\\tself.play(Write(equation))\\n\\t\\tself.play(equation.animate.to_edge(UP))\\n\\t\\tself.play(Create(graph))\\n\\t\\tself.wait(3)"
-        }
-    ]`
-      } catch (e) {
-        // Fallback if previous content is invalid
-                console.log('mockoutput 2');
-
-       mockOutput = `[
-        {
-          "scene": "Scene 1: ",
-          "code": "from manim import *\\n\\nclass ImprovedScene(Scene):\\n\\tdef construct(self):\\n\\t\\ttitle = Text('The Pythagorean Theorem', font_size=36, color=GOLD)\\n\\t\\tself.play(Write(title))\\n\\t\\tself.wait(2)"
-        }
-      ]`;
-      }
-    } else {
-              console.log('mockoutput 3');
-
-      // Initial video generation
-      mockOutput = `[
-        {
-          "scene": "Scene 1: Introduction to ",
-          "code": "from manim import *\\n\\nclass IntroductionScene(Scene):\\n\\tdef construct(self):\\n\\t\\taxes = Axes(x_range=[-5, 5], y_range=[-3, 3])\\n\\t\\ttitle = Text('secene 1', font_size=40, color=GOLD)\\n\\t\\tsubtitle = Text('Comprehensive Guide', font_size=24, color=BLUE)\\n\\t\\tself.play(Write(title))\\n\\t\\tself.play(FadeIn(subtitle))\\n\\t\\tself.wait(2)\\n\\t\\tself.play(Create(axes))\\n\\t\\tself.wait(1)"
-        },
-        {
-          "scene": "Scene 2: Basic Concepts of ",
-          "code": "from manim import *\\n\\nclass BasicConceptsScene(Scene):\\n\\tdef construct(self):\\n\\t\\tcircle = Circle(radius=1.5, color=GREEN)\\n\\t\\tsquare = Square(side_length=2, color=RED)\\n\\t\\ttriangle = Polygon([0, 1.5, 0], [-0.5, -0.5, 0], [0.5, -0.5, 0], color=BLUE)\\n\\t\\tself.play(Create(circle), Create(square), Create(triangle))\\n\\t\\tself.wait(2)\\n\\t\\tlabel = Text('Exploring', font_size=24)\\n\\t\\tlabel.to_edge(UP)\\n\\t\\tself.play(Write(label))\\n\\t\\tself.wait(2)"
-        },
-        {
-          "scene": "Scene 3: Advanced ",
-          "code": "from manim import *\\n\\nclass AdvancedScene(Scene):\\n\\tdef construct(self):\\n\\t\\tequation = MathTex(r\\\"f(x) = x^2 + 2x + 1\\\", font_size=48, color=YELLOW)\\n\\t\\tgraph = Axes(x_range=[-4, 2], y_range=[-1, 10]).plot(lambda x: x**2 + 2*x + 1, color=GREEN)\\n\\t\\tself.play(Write(equation))\\n\\t\\tself.play(equation.animate.to_edge(UP))\\n\\t\\tself.play(Create(graph))\\n\\t\\tself.wait(3)"
-        }
-    ]`
+    try {
+      // Try to extract JSON if wrapped in markdown code blocks
+      const jsonMatch = output.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+      mockOutput = jsonMatch ? jsonMatch[1] : output;
+      scenes = JSON.parse(mockOutput);
+    } catch (e) {
+      // If parsing fails, log the error and return a meaningful response
+      throw new Error(`Failed to parse API response as valid JSON. Response: ${output.substring(0, 500)}`);
     }
-    
-    scenes = JSON.parse(mockOutput);
     const sceneCount = scenes.length;
    
     await prisma.prompt.update({
@@ -209,7 +158,7 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: 'Something went wrong.' }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
