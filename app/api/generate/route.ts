@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { SYSTEM_PROMPT, ENHANCED_USER, ENHANCED_USER_CONTINUATION, SYSTEM_PROMPT_CONTINUATION } from '@/defults/prompt';
+import { SYSTEM_PROMPT, ENHANCED_USER, ENHANCED_USER_CONTINUATION, SYSTEM_PROMPT_CONTINUATION } from '@/defaults/prompt';
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@/db/generated/prisma';
 import { getServerSession } from 'next-auth';
