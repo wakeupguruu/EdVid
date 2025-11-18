@@ -6,6 +6,9 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  // Connection pool configuration
+  // Using PgBouncer or Prisma's connection pooling
+  // directUrl will be used for migrations
 }
 
 // Enum for prompt status

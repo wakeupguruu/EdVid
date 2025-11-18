@@ -269,18 +269,14 @@ docker run -p 3000:3000 -e DATABASE_URL=... edvid
 Contributions are welcome! Please follow these steps:
 
 1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
+2. Create your feature branch (`git checkout -b feature`)
+3. Commit your changes (`git commit -m 'Add feature'`)
+4. Push to the branch (`git push origin feature`)
 5. Open a Pull Request
 
 ## 📝 License
 
 This project is licensed under the MIT License - see [LICENSE](LICENSE) file for details.
-
-## 👨‍💻 Author
-
-**Vyasakhan Guruu** - [@wakeupguruu](https://github.com/wakeupguruu)
 
 ## 🙏 Acknowledgments
 
@@ -294,7 +290,6 @@ This project is licensed under the MIT License - see [LICENSE](LICENSE) file for
 
 - 📖 [Documentation](./DEPLOYMENT.md)
 - 🐛 [Report Issues](https://github.com/wakeupguruu/EdVid/issues)
-- 💬 [GitHub Discussions](https://github.com/wakeupguruu/EdVid/discussions)
 
 ## ⭐ Show Your Support
 

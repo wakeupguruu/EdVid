@@ -6,7 +6,9 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "worker": "node worker.mjs",
+    "debug": "node debug.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.56.0",
@@ -15,13 +17,17 @@
     "@heroui/theme": "^2.4.20",
     "@prisma/client": "^6.18.0",
     "@tabler/icons-react": "^3.34.1",
+    "axios": "^1.13.2",
     "bcryptjs": "^3.0.2",
+    "bull": "^4.16.5",
     "class-variance-authority": "^0.7.1",
+    "cloudinary": "^2.8.0",
     "clsx": "^2.1.1",
     "dotenv": "^17.2.1",
     "fluent-ffmpeg": "^2.1.3",
     "framer-motion": "^12.23.12",
     "googleapis": "^130.0.0",
+    "ioredis": "^5.8.2",
     "jsonrepair": "^3.13.0",
     "lucide-react": "^0.536.0",
     "motion": "^12.23.12",
@@ -29,11 +35,13 @@
     "next-auth": "^4.24.11",
     "react": "19.1.0",
     "react-dom": "19.1.0",
+    "redis": "^5.9.0",
     "tailwind-merge": "^3.3.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
+    "@types/bull": "^3.15.9",
     "@types/fluent-ffmpeg": "^2.1.27",
     "@types/node": "^20",
     "@types/react": "^19",
