@@ -3,6 +3,7 @@ export interface VideoData {
   promptId: string;
   sceneCount: number;
   status: 'queued' | 'processing' | 'completed' | 'failed';
+  videoUrl?: string;
   isContinuation?: boolean;
   previousPromptId?: string;
 }
