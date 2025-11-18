@@ -16,7 +16,7 @@ export async function getRedisClient() {
   if (!isConnected) {
     await client.connect();
     isConnected = true;
-    logger.info('✅ [Redis] Connected');
+    logger.info('Redis Connected');
   }
   return client;
 }

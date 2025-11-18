@@ -35,9 +35,9 @@ redis.on('connect', () => console.log('✅ Connected to Redis'));
 // Python service URL
 const MANIM_SERVICE_URL = process.env.MANIM_SERVICE_URL || 'http://localhost:5000';
 
-console.log('🚀 Video Worker started...');
-console.log(`📍 Redis: ${process.env.REDIS_HOST || 'localhost'}:${process.env.REDIS_PORT || '6379'}`);
-console.log(`🐍 Python Service: ${MANIM_SERVICE_URL}`);
+console.log('Video Worker started...');
+console.log(` Redis: ${process.env.REDIS_HOST || 'localhost'}:${process.env.REDIS_PORT || '6379'}`);
+console.log(`Python Service: ${MANIM_SERVICE_URL}`);
 
 async function processJob(jobData) {
   const { videoId, userId, promptId } = jobData;
@@ -51,8 +51,8 @@ async function processJob(jobData) {
       data: { status: 'processing', processingStartedAt: new Date() }
     });
 
-    console.log(`   📍 Status updated to processing`);
-
+    console.log(`Status updated to processing`);
+    console.log(videoId, userId, promptId)
     // Get code from database
     const video = await prisma.video.findUnique({
       where: { id: videoId },
@@ -70,9 +70,11 @@ async function processJob(jobData) {
     const pythonCode = video.prompt.codeSnippet.code;
     console.log(`   🐍 Python code length: ${pythonCode.length} chars`);
 
+
     // Call Python service
     console.log(`   📞 Calling Python service at ${MANIM_SERVICE_URL}...`);
     
+
     const response = await axios.post(
       `${MANIM_SERVICE_URL}/execute`,
       {
@@ -109,10 +111,10 @@ async function processJob(jobData) {
     );
 
     const videoUrl = cloudinaryResponse.data.secure_url;
-    console.log(`   🔗 Video URL: ${videoUrl}`);
+    console.log(`Video URL: ${videoUrl}`);
 
     // Update database
-    console.log(`   💾 Updating database...`);
+    console.log(`Updating database...`);
     
     await prisma.video.update({
       where: { id: videoId },
@@ -159,9 +161,10 @@ async function processJob(jobData) {
 }
 
 async function startWorker() {
-  await redis.connect();
-
-  console.log('👂 Listening for jobs on video-queue...\n');
+  if (!redis.isOpen) {
+    await redis.connect();
+  }
+  console.log('Listening for jobs on video-queue...\n');
 
   // Poll for jobs
   while (true) {
@@ -189,7 +192,9 @@ async function startWorker() {
 // Graceful shutdown
 process.on('SIGINT', async () => {
   console.log('\n🛑 Shutting down worker...');
-  await redis.disconnect();
+  if (redis.isOpen) {
+    await redis.quit();
+  }
   await prisma.$disconnect();
   process.exit(0);
 });

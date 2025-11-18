@@ -20,6 +20,7 @@ function resolveToAbsolute(filePath: string): string {
 }
 
 function resolveDirectoryCandidate(dirPath: string): string {
+	
     if (path.isAbsolute(dirPath)) return dirPath;
     const candidateInCwd = path.resolve(process.cwd(), dirPath);
     if (fs.existsSync(candidateInCwd)) return candidateInCwd;

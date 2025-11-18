@@ -185,7 +185,7 @@ class MainScene(Scene):
     await prisma.prompt.update({
       where: { id: prompt.id },
       data: {
-        rawOutput: parsedOutput,
+        rawOutput: mockOutput,
         content: parsedOutput,
         status: 'completed',
         startedProcessingAt: new Date(),
@@ -197,7 +197,10 @@ class MainScene(Scene):
     logger.info(`Prompt updated as completed`);
 
 
-    const pythonCode = scenes.map((s: any) => s.code).join('\n\n');
+    const pythonCode = scenes
+    .map((s: any) => (s && typeof s.code === "string" ? s.code.trim() : ""))
+    .filter(Boolean)
+    .join("\n\n");
 
     const codeSnippet = await prisma.codeSnippet.create({
       data: {
