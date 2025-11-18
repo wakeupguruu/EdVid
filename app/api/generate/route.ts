@@ -7,6 +7,7 @@ import { Next_Auth } from '@/lib/auth';
 import { ExtendedUser } from '@/lib/auth';
 import { validators, ValidationErrors } from '@/lib/validation';
 import { logger } from '@/lib/logger';
+import { getRedisClient } from '@/lib/redis';
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -16,7 +17,7 @@ const prisma = new PrismaClient();
 
 export async function POST(req: NextRequest) {
   try {
-    logger.info('🎬 [Generate] Request received');
+    logger.info('Generate Request received');
     
     const session = await getServerSession(Next_Auth);
     const user = session?.user as ExtendedUser;
@@ -28,6 +29,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const userPrompt = body.prompt;
     const previousPromptId = body.previousPromptId;
+
 
     try{
       validators.prompt(userPrompt);
@@ -43,11 +45,13 @@ export async function POST(req: NextRequest) {
         }
     }
     
+
     if (!userPrompt) {
       return NextResponse.json({ error: 'Prompt is required.' }, { status: 400 });
     }
 
-    logger.info(`📝 [Generate] User prompt: "${userPrompt.substring(0, 50)}..."`);
+
+    logger.info(`📝Generate] User prompt: "${userPrompt.substring(0, 50)}..."`);
 
     // Get previous prompt context if this is a continuation
     let previousContext = null;
@@ -76,6 +80,7 @@ export async function POST(req: NextRequest) {
         previousPromptId: previousPromptId || null,
       }
     });
+
 
     logger.info(`💾 [Generate] Prompt created: ${prompt.id}`);
 
@@ -118,9 +123,11 @@ export async function POST(req: NextRequest) {
     logger.info(`✅ [Generate] API response received (${output.length} chars)`);
     */
 
+
     // Mock response for testing (until API balance is restored)
     logger.info(`🤖 [Generate] Using mock response (API disabled temporarily)`);
     
+
     const mockOutput = JSON.stringify([
       {
         scene: "Introduction",
@@ -152,6 +159,7 @@ class MainScene(Scene):
 
     logger.info(`✅ [Generate] Mock response generated (${mockOutput.length} chars)`);
     
+
     let output = mockOutput;
     
     // Parse the output
@@ -162,14 +170,18 @@ class MainScene(Scene):
       const jsonMatch = output.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
       parsedOutput = jsonMatch ? jsonMatch[1] : output;
       scenes = JSON.parse(parsedOutput);
-      logger.info(`📊 [Generate] Parsed ${scenes.length} scenes`);
+
+      logger.info(`Parsed ${scenes.length} scenes`);
+
     } catch (e) {
-      logger.error('❌ [Generate] JSON parsing failed', { error: e });
+      logger.error('JSON parsing failed', { error: e });
       throw new Error(`Failed to parse API response as valid JSON. Response: ${output.substring(0, 500)}`);
     }
 
+
     const sceneCount = scenes.length;
    
+    // Update prompt with parsed output
     await prisma.prompt.update({
       where: { id: prompt.id },
       data: {
@@ -181,7 +193,9 @@ class MainScene(Scene):
       }
     });
 
-    logger.info(`💾 [Generate] Prompt updated as completed`);
+
+    logger.info(`Prompt updated as completed`);
+
 
     const pythonCode = scenes.map((s: any) => s.code).join('\n\n');
 
@@ -204,7 +218,7 @@ class MainScene(Scene):
       }
     });
 
-    logger.info(`📹 [Generate] Video created: ${video.id} (status: queued)`);
+    logger.info(`Generate Video created: ${video.id} (status: queued)`);
 
     await prisma.videoProcessingLog.create({
       data: {
@@ -228,14 +242,7 @@ class MainScene(Scene):
     logger.info(`🔴 [Generate] Pushing to Redis queue...`);
     
     try {
-      const redis = require('redis');
-      const client = redis.createClient({
-        host: process.env.REDIS_HOST || 'localhost',
-        port: parseInt(process.env.REDIS_PORT || '6379'),
-      });
-      
-      await client.connect();
-      logger.info(`✅ [Generate] Connected to Redis`);
+      const client = await getRedisClient();
       
       // Push to a simple Redis list that worker listens to
       const jobData = {
@@ -247,8 +254,7 @@ class MainScene(Scene):
       
       await client.lPush('video-queue', JSON.stringify(jobData));
       logger.info(`✅ [Generate] Job pushed to Redis queue: ${JSON.stringify(jobData)}`);
-      
-      await client.disconnect();
+    
       logger.info(`✅ [Generate] Disconnected from Redis`);
     } catch (error) {
       logger.error('❌ [Generate] Failed to queue video', { error });
