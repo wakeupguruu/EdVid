@@ -7,7 +7,6 @@ import { Next_Auth } from '@/lib/auth';
 import { ExtendedUser } from '@/lib/auth';
 import { validators, ValidationErrors } from '@/lib/validation';
 import { logger } from '@/lib/logger';
-import { executeManifAsync } from '@/lib/manim';
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -17,6 +16,8 @@ const prisma = new PrismaClient();
 
 export async function POST(req: NextRequest) {
   try {
+    logger.info('🎬 [Generate] Request received');
+    
     const session = await getServerSession(Next_Auth);
     const user = session?.user as ExtendedUser;
 
@@ -26,8 +27,7 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const userPrompt = body.prompt;
-    const previousPromptId = body.previousPromptId; // For continuation requests
-
+    const previousPromptId = body.previousPromptId;
 
     try{
       validators.prompt(userPrompt);
@@ -42,9 +42,12 @@ export async function POST(req: NextRequest) {
             throw error;
         }
     }
+    
     if (!userPrompt) {
       return NextResponse.json({ error: 'Prompt is required.' }, { status: 400 });
     }
+
+    logger.info(`📝 [Generate] User prompt: "${userPrompt.substring(0, 50)}..."`);
 
     // Get previous prompt context if this is a continuation
     let previousContext = null;
@@ -60,7 +63,7 @@ export async function POST(req: NextRequest) {
 
       previousContext = {
         originalPrompt: previousPrompt.inputText,
-        content: previousPrompt.content, // The parsed JSON from previous generation
+        content: previousPrompt.content,
         rawOutput: previousPrompt.rawOutput
       };
     }
@@ -74,6 +77,8 @@ export async function POST(req: NextRequest) {
       }
     });
 
+    logger.info(`💾 [Generate] Prompt created: ${prompt.id}`);
+
     await prisma.activityLog.create({
       data: {
         userId: user.id,
@@ -84,10 +89,14 @@ export async function POST(req: NextRequest) {
     });
 
     // Call Anthropic API to generate video scripts
+    // TEMPORARILY COMMENTED - No API balance
+    /*
     const PROMPT = previousContext 
       ? ENHANCED_USER_CONTINUATION(userPrompt, previousContext)
       : ENHANCED_USER(userPrompt);
 
+    logger.info(`🤖 [Generate] Calling Anthropic API...`);
+    
     const stream = anthropic.messages.stream({
       model: 'claude-opus-4-20250514',
       max_tokens: 20000,
@@ -106,33 +115,73 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    logger.info(`✅ [Generate] API response received (${output.length} chars)`);
+    */
+
+    // Mock response for testing (until API balance is restored)
+    logger.info(`🤖 [Generate] Using mock response (API disabled temporarily)`);
+    
+    const mockOutput = JSON.stringify([
+      {
+        scene: "Introduction",
+        duration: 5,
+        code: `from manim import *
+class IntroScene(Scene):
+    def construct(self):
+        title = Text("Educational Video", font_size=60)
+        subtitle = Text("${userPrompt.substring(0, 30)}...", font_size=30)
+        self.play(Write(title))
+        self.wait(1)
+        self.play(Write(subtitle))
+        self.wait(2)`
+      },
+      {
+        scene: "Main Content",
+        duration: 10,
+        code: `from manim import *
+class MainScene(Scene):
+    def construct(self):
+        circle = Circle()
+        square = Square()
+        self.play(Create(circle))
+        self.wait(1)
+        self.play(Transform(circle, square))
+        self.wait(2)`
+      }
+    ]);
+
+    logger.info(`✅ [Generate] Mock response generated (${mockOutput.length} chars)`);
+    
+    let output = mockOutput;
+    
     // Parse the output
-    let mockOutput: string;
+    let parsedOutput: string;
     let scenes: any[];
     
     try {
-      // Try to extract JSON if wrapped in markdown code blocks
       const jsonMatch = output.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-      mockOutput = jsonMatch ? jsonMatch[1] : output;
-      scenes = JSON.parse(mockOutput);
+      parsedOutput = jsonMatch ? jsonMatch[1] : output;
+      scenes = JSON.parse(parsedOutput);
+      logger.info(`📊 [Generate] Parsed ${scenes.length} scenes`);
     } catch (e) {
-      // If parsing fails, log the error and return a meaningful response
+      logger.error('❌ [Generate] JSON parsing failed', { error: e });
       throw new Error(`Failed to parse API response as valid JSON. Response: ${output.substring(0, 500)}`);
     }
-
 
     const sceneCount = scenes.length;
    
     await prisma.prompt.update({
       where: { id: prompt.id },
       data: {
-        rawOutput: mockOutput,
-        content: mockOutput, // Store the parsed JSON
+        rawOutput: parsedOutput,
+        content: parsedOutput,
         status: 'completed',
         startedProcessingAt: new Date(),
         completedAt: new Date()
       }
     });
+
+    logger.info(`💾 [Generate] Prompt updated as completed`);
 
     const pythonCode = scenes.map((s: any) => s.code).join('\n\n');
 
@@ -144,20 +193,24 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    // Create video with "processing" status
+    logger.info(`🐍 [Generate] Code snippet created (${pythonCode.length} chars)`);
+
+    // Create video with "queued" status
     const video = await prisma.video.create({
       data: {
         promptId: prompt.id,
-        status: "processing",
+        status: "queued",
         title: scenes[0]?.scene || "Generated Video"
       }
     });
+
+    logger.info(`📹 [Generate] Video created: ${video.id} (status: queued)`);
 
     await prisma.videoProcessingLog.create({
       data: {
         videoId: video.id,
         stage: "queued",
-        message: "Video sent to Manim execution service",
+        message: "Video queued for processing",
         level: "info"
       }
     });
@@ -171,12 +224,38 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    // Send to Manim service asynchronously (don't wait for response)
-    // The Manim service will upload to Cloudinary and send webhook when ready
-    executeManifAsync(video.id, pythonCode, 'l').catch(error => {
-      logger.error('Failed to queue Manim execution', { videoId: video.id, error });
-    });
+    // Queue video for processing (Bull/Redis will handle it)
+    logger.info(`🔴 [Generate] Pushing to Redis queue...`);
+    
+    try {
+      const redis = require('redis');
+      const client = redis.createClient({
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT || '6379'),
+      });
+      
+      await client.connect();
+      logger.info(`✅ [Generate] Connected to Redis`);
+      
+      // Push to a simple Redis list that worker listens to
+      const jobData = {
+        videoId: video.id,
+        userId: user.id,
+        promptId: prompt.id,
+        timestamp: new Date().toISOString()
+      };
+      
+      await client.lPush('video-queue', JSON.stringify(jobData));
+      logger.info(`✅ [Generate] Job pushed to Redis queue: ${JSON.stringify(jobData)}`);
+      
+      await client.disconnect();
+      logger.info(`✅ [Generate] Disconnected from Redis`);
+    } catch (error) {
+      logger.error('❌ [Generate] Failed to queue video', { error });
+    }
   
+    logger.info(`🎉 [Generate] Response sent successfully`);
+    
     return NextResponse.json({ 
       success: true,
       promptId: prompt.id,
