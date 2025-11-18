@@ -94,7 +94,24 @@ export function ChatInterface({ onSendMessage, messages, isLoading, error, curre
   };
 
   const renderVideoPlayer = (videoData: any) => {
-    if (videoData.status === "completed") {
+    // Show loading state while processing
+    if (videoData.status === "queued" || videoData.status === "processing") {
+      return (
+        <div className="mt-2 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+          <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>
+              {videoData.status === "queued" ? "Queued for processing..." : "Processing your video..."}
+            </span>
+          </div>
+          <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
+            {videoData.sceneCount} scenes • Video ID: {videoData.videoId}
+          </p>
+        </div>
+      );
+    }
+
+    if (videoData.status === "completed" && videoData.videoUrl) {
       return (
         <div className="mt-3 space-y-3">
           <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
@@ -118,9 +135,9 @@ export function ChatInterface({ onSendMessage, messages, isLoading, error, curre
                   console.error("Video failed to load:", e);
                 }}
               >
-                <source src="/merged/merged.mp4" type="video/mp4" />
+                <source src={videoData.videoUrl || "/merged/merged.mp4"} type="video/mp4" />
                 <div className="flex items-center justify-center h-32 text-white">
-                  <p>Video not available. Please check the merged folder.</p>
+                  <p>Video not available. URL: {videoData.videoUrl}</p>
                 </div>
               </video>
             </div>
@@ -132,7 +149,7 @@ export function ChatInterface({ onSendMessage, messages, isLoading, error, curre
                 <Button
                   variant="outline"
                   className="h-6 px-2 text-xs"
-                  onClick={() => window.open("/merged/merged.mp4", "_blank")}
+                  onClick={() => window.open(videoData.videoUrl || "/merged/merged.mp4", "_blank")}
                 >
                   <Download className="h-3 w-3 mr-1" />
                   Download

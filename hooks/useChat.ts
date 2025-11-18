@@ -81,26 +81,70 @@ export function useChat() {
     });
 
     setIsLoading(true);
+    
+    let data: GenerateResponse | null = null;
 
     try {
-      // Make actual API call to generate endpoint
-      const response = await fetch("/api/generate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ 
-          prompt: content.trim(),
-          previousPromptId: currentPromptId // Include previous prompt ID for continuation
-        }),
-      });
+      // Make actual API call to generate endpoint with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
 
-      // Check if response is ok
-      if (!response.ok) {
-        throw new Error("Failed to generate video");
+      // Add progress updates while waiting
+      const progressMessages = [
+        "I'm analyzing your request and creating an educational video...",
+        "Calling Claude AI to generate scenes...",
+        "Parsing video structure...",
+        "Creating animation code...",
+        "Preparing video queue...",
+      ];
+      
+      let progressIndex = 0;
+      const progressInterval = setInterval(() => {
+        if (progressIndex < progressMessages.length - 1) {
+          progressIndex++;
+          updateMessage(assistantMessage.id, {
+            content: progressMessages[progressIndex],
+            isGenerating: true,
+          });
+        }
+      }, 3000);
+
+      try {
+        const response = await fetch("/api/generate", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ 
+            prompt: content.trim(),
+            previousPromptId: currentPromptId
+          }),
+          signal: controller.signal,
+        });
+
+        clearInterval(progressInterval);
+        clearTimeout(timeoutId);
+
+        // Check if response is ok
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || `HTTP ${response.status}: Failed to generate video`);
+        }
+
+        data = await response.json();
+        
+        if (!data || !data.success) {
+          throw new Error(data?.error || "Generation returned success: false");
+        }
+      } catch (fetchError) {
+        clearInterval(progressInterval);
+        clearTimeout(timeoutId);
+        
+        if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+          throw new Error("Request timed out after 2 minutes. The API may be overloaded. Please try again.");
+        }
+        throw fetchError;
       }
-
-      const data: GenerateResponse = await response.json();
 
       // Update message to show progress
       updateMessage(assistantMessage.id, {
@@ -121,35 +165,66 @@ export function useChat() {
       const isContinuation = !!currentPromptId;
 
       // Update current prompt ID for future continuations
-      setCurrentPromptId(data.promptId);
-      
-      // Set current chat ID if this is a new chat
-      if (!currentChatId) {
-        setCurrentChatId(data.promptId);
-      }
+      if (data) {
+        setCurrentPromptId(data.promptId);
+        
+        // Set current chat ID if this is a new chat
+        if (!currentChatId) {
+          setCurrentChatId(data.promptId);
+        }
 
-      if (data.success) {
-        const videoData: VideoData = {
-          videoId: data.videoId,
-          promptId: data.promptId,
-          sceneCount: data.sceneCount,
-          status: "completed", // Mark as completed since we're showing existing video
-          isContinuation,
-          previousPromptId: currentPromptId || undefined,
-        };
+        if (data.success) {
+          const videoData: VideoData = {
+            videoId: data.videoId,
+            promptId: data.promptId,
+            sceneCount: data.sceneCount,
+            status: "queued", // Start as queued, will poll for updates
+            isContinuation,
+            previousPromptId: currentPromptId || undefined,
+          };
 
-        // Update assistant message with success response and video
-        const continuationText = isContinuation 
-          ? `Perfect! I've extended your video with ${data.sceneCount} additional scenes. Here's your enhanced video:`
-          : `Perfect! I've created a comprehensive educational video with ${data.sceneCount} scenes covering your topic. Here's your video:`;
+          // Update assistant message with success response and video
+          const continuationText = isContinuation 
+            ? `Perfect! I've extended your video with ${data.sceneCount} additional scenes. Here's your enhanced video:`
+            : `Perfect! I've created a comprehensive educational video with ${data.sceneCount} scenes covering your topic. Here's your video:`;
 
-        updateMessage(assistantMessage.id, {
-          content: continuationText,
-          isGenerating: false,
-          videoData,
-        });
-      } else {
-        throw new Error(data.error || "Generation failed");
+          updateMessage(assistantMessage.id, {
+            content: continuationText,
+            isGenerating: true,
+            videoData,
+          });
+
+          // Start polling for video status
+          const pollInterval = setInterval(async () => {
+            try {
+              if (!data) return;
+              
+              const statusResponse = await fetch(`/api/videos/${data.videoId}/status`);
+              if (statusResponse.ok) {
+                const statusData = await statusResponse.json();
+                
+                updateMessage(assistantMessage.id, {
+                  videoData: {
+                    ...videoData,
+                    status: statusData.status as any,
+                    videoUrl: statusData.videoUrl
+                  },
+                  isGenerating: statusData.status !== 'completed' && statusData.status !== 'failed'
+                });
+
+                // Stop polling when complete or failed
+                if (statusData.status === 'completed' || statusData.status === 'failed') {
+                  clearInterval(pollInterval);
+                }
+              }
+            } catch (error) {
+              console.error('Failed to poll video status:', error);
+            }
+          }, 2000); // Poll every 2 seconds
+
+        } else {
+          throw new Error(data.error || "Generation failed");
+        }
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred";
