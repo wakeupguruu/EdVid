@@ -8,16 +8,17 @@ import { validators, ValidationErrors } from '@/lib/validation';
 const prisma = new PrismaClient();
 
 export async function GET(req: NextRequest) {
+
   let validatedChatId: string;
+
   try {
+
     const session = await getServerSession(Next_Auth);
     const user = session?.user as ExtendedUser;
-
 
     if (!user || !user.id) {
       return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
     }
-
 
     // Get all prompts for the user, grouped by chat sessions
     const prompts = await prisma.prompt.findMany({
@@ -39,6 +40,7 @@ export async function GET(req: NextRequest) {
     const processedPromptIds = new Set<string>();
 
     for (const prompt of prompts) {
+
       if (processedPromptIds.has(prompt.id)) continue;
 
       // Find the root prompt (no previousPromptId) for this chat session

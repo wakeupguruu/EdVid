@@ -6,7 +6,7 @@ import type { JWT } from "next-auth/jwt";
 config({ path: "./db/.env" });
 import { PrismaClient } from "@/db/generated/prisma";
 import { compare, hash } from "bcryptjs";
-
+import { validators, ValidationErrors } from "./validation";
 export interface ExtendedUser {
   id: string;
   name: string | null;
@@ -26,16 +26,17 @@ export const Next_Auth: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
+        const validatedEmail = validators.email(credentials.email)
 
         const existingUser = await prisma.user.findUnique({
-          where: { email: credentials.email },
+          where: { email: validatedEmail },
         });
 
         if (!existingUser) {
           const hashedPassword = await hash(credentials.password, 10);
           const newUser = await prisma.user.create({
             data: {
-              email: credentials.email,
+              email: validatedEmail,
               password: hashedPassword,
               name: null,
             },
@@ -102,9 +103,11 @@ export const Next_Auth: NextAuthOptions = {
       const userEmail = session.user?.email;
       if (!userEmail) return session;
 
+      const validatedEmail = validators.email(userEmail)
+
       // 👇 Fetch the latest user data from your database
       const dbUser = await prisma.user.findUnique({
-        where: { email: userEmail },
+        where: { email: validatedEmail },
       });
 
       if (dbUser) {

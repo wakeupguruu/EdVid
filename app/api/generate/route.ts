@@ -17,6 +17,7 @@ const prisma = new PrismaClient();
 
 export async function POST(req: NextRequest) {
   try {
+
     logger.info('Generate Request received');
     
     const session = await getServerSession(Next_Auth);
@@ -29,7 +30,6 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const userPrompt = body.prompt;
     const previousPromptId = body.previousPromptId;
-
 
     try{
       validators.prompt(userPrompt);
@@ -45,11 +45,9 @@ export async function POST(req: NextRequest) {
         }
     }
     
-
     if (!userPrompt) {
       return NextResponse.json({ error: 'Prompt is required.' }, { status: 400 });
     }
-
 
     logger.info(`📝Generate] User prompt: "${userPrompt.substring(0, 50)}..."`);
 
@@ -80,7 +78,6 @@ export async function POST(req: NextRequest) {
         previousPromptId: previousPromptId || null,
       }
     });
-
 
     logger.info(`💾 [Generate] Prompt created: ${prompt.id}`);
 
@@ -142,6 +139,7 @@ class IntroScene(Scene):
         self.play(Write(subtitle))
         self.wait(2)`
       },
+
       {
         scene: "Main Content",
         duration: 10,
@@ -159,7 +157,6 @@ class MainScene(Scene):
 
     logger.info(`✅ [Generate] Mock response generated (${mockOutput.length} chars)`);
     
-
     let output = mockOutput;
     
     // Parse the output
@@ -178,7 +175,6 @@ class MainScene(Scene):
       throw new Error(`Failed to parse API response as valid JSON. Response: ${output.substring(0, 500)}`);
     }
 
-
     const sceneCount = scenes.length;
    
     // Update prompt with parsed output
@@ -193,9 +189,7 @@ class MainScene(Scene):
       }
     });
 
-
     logger.info(`Prompt updated as completed`);
-
 
     const pythonCode = scenes
     .map((s: any) => (s && typeof s.code === "string" ? s.code.trim() : ""))
@@ -256,11 +250,15 @@ class MainScene(Scene):
       };
       
       await client.lPush('video-queue', JSON.stringify(jobData));
+
       logger.info(`✅ [Generate] Job pushed to Redis queue: ${JSON.stringify(jobData)}`);
     
       logger.info(`✅ [Generate] Disconnected from Redis`);
+
     } catch (error) {
+
       logger.error('❌ [Generate] Failed to queue video', { error });
+      
     }
   
     logger.info(`🎉 [Generate] Response sent successfully`);
