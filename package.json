@@ -15,7 +15,7 @@
     "@heroui/input": "^2.4.25",
     "@heroui/system": "^2.4.20",
     "@heroui/theme": "^2.4.20",
-    "@prisma/client": "^7.0.0",
+    "@prisma/client": "^5.22.0",
     "@tabler/icons-react": "^3.34.1",
     "axios": "^1.13.2",
     "bcryptjs": "^3.0.2",
@@ -49,7 +49,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "15.4.2",
-    "prisma": "^7.0.0",
+    "prisma": "^5.22.0",
     "tailwindcss": "^4",
     "tw-animate-css": "^1.3.6",
     "typescript": "^5"

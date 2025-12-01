@@ -88,30 +88,8 @@ async function processJob(jobData) {
       throw new Error(`Manim failed: ${response.data.error}`);
     }
 
-    const { videoPath, tempDir } = response.data;
-    console.log(`   ✅ Video generated at ${videoPath}`);
-
-    // Check if file exists
-    if (!fs.existsSync(videoPath)) {
-      throw new Error(`Video file not found: ${videoPath}`);
-    }
-
-    console.log(`   ☁️  Uploading to Cloudinary...`);
-
-    // Upload to Cloudinary
-    const form = new FormData();
-    form.append('file', fs.createReadStream(videoPath));
-    form.append('upload_preset', process.env.CLOUDINARY_UPLOAD_PRESET);
-    form.append('resource_type', 'video');
-
-    const cloudinaryResponse = await axios.post(
-      `https://api.cloudinary.com/v1_1/${process.env.CLOUDINARY_CLOUD_NAME}/video/upload`,
-      form,
-      { headers: form.getHeaders(), timeout: 300000 }
-    );
-
-    const videoUrl = cloudinaryResponse.data.secure_url;
-    console.log(`Video URL: ${videoUrl}`);
+    const { videoUrl } = response.data;
+    console.log(`   ✅ Video generated and uploaded: ${videoUrl}`);
 
     // Update database
     console.log(`Updating database...`);
@@ -124,16 +102,6 @@ async function processJob(jobData) {
         processingCompletedAt: new Date()
       }
     });
-
-    // Cleanup temp files
-    try {
-      if (tempDir && fs.existsSync(tempDir)) {
-        fs.rmSync(tempDir, { recursive: true });
-        console.log(`   🧹 Cleaned up temp files`);
-      }
-    } catch (e) {
-      console.warn(`   ⚠️  Failed to cleanup ${tempDir}`);
-    }
 
     console.log(`   ✨ Video ${videoId} completed!\n`);
     return true;
@@ -170,7 +138,12 @@ async function startWorker() {
   while (true) {
     try {
       // Pop a job from the queue (blocking for 5 seconds)
+      // console.log('Waiting for job...');
       const jobJson = await redis.brPop('video-queue', 5);
+
+      if (jobJson) {
+        console.log('📦 Raw Redis response:', JSON.stringify(jobJson));
+      }
 
       if (jobJson && jobJson.element) {
         try {
@@ -180,6 +153,9 @@ async function startWorker() {
         } catch (parseError) {
           console.error('❌ Failed to parse job:', parseError);
         }
+      } else if (jobJson) {
+         // Handle case where format might be different (e.g. array)
+         console.warn('⚠️ Unexpected job format:', jobJson);
       }
     } catch (error) {
       console.error('❌ Worker error:', error);

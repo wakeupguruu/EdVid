@@ -1,56 +1,44 @@
 generator client {
-  provider = "prisma-client"
+  provider = "prisma-client-js"
   output   = "../generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
-  
-}
-
-// Enum for prompt status
-enum PromptStatus {
-  pending
-  processing
-  completed
-  failed
+  url      = env("DATABASE_URL")
 }
 
 model User {
-  id        String    @id @default(cuid())
+  id        String        @id @default(cuid())
   name      String?
-  email     String?   @unique
+  email     String?       @unique
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
   password  String?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-
-  prompts   Prompt[]
   logs      ActivityLog[]
+  prompts   Prompt[]
   quota     UserQuota?
 }
 
 model Prompt {
-  id               String        @id @default(cuid())
-  inputText        String
-  rawOutput        String?
-  content          String? 
-  status           PromptStatus  @default(pending)
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  id                  String        @id @default(cuid())
+  inputText           String
+  status              PromptStatus  @default(pending)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
   startedProcessingAt DateTime?
-  completedAt      DateTime?
-  deletedAt        DateTime?
-
-  previousPromptId String?
-  userId           String
-
-  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  previousPrompt   Prompt?       @relation("PromptHistory", fields: [previousPromptId], references: [id])
-  nextPrompts      Prompt[]      @relation("PromptHistory")
-
-  codeSnippet      CodeSnippet?
-  video            Video?
-  logs             ActivityLog[]
+  completedAt         DateTime?
+  deletedAt           DateTime?
+  previousPromptId    String?
+  userId              String
+  rawOutput           String?
+  content             String?
+  logs                ActivityLog[]
+  codeSnippet         CodeSnippet?
+  previousPrompt      Prompt?       @relation("PromptHistory", fields: [previousPromptId], references: [id])
+  nextPrompts         Prompt[]      @relation("PromptHistory")
+  user                User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video               Video?
 
   @@index([userId])
   @@index([status])
@@ -64,43 +52,32 @@ model CodeSnippet {
   code      String
   language  String
   createdAt DateTime @default(now())
-
   prompt    Prompt   @relation(fields: [promptId], references: [id])
 }
 
 model Video {
-  id        String         @id @default(uuid())
-  promptId  String         @unique
-  createdAt DateTime       @default(now())
-  title String?
-  duration Int?
-  thumbnailUrl String?
-  videoUrl String?
-  processingStartedAt DateTime?
+  id                    String               @id @default(uuid())
+  promptId              String               @unique
+  createdAt             DateTime             @default(now())
+  duration              Int?
+  errorMessage          String?
   processingCompletedAt DateTime?
-  errorMessage String?
-  
-  status VideoStatus @default(queued)
-  prompt    Prompt         @relation(fields: [promptId], references: [id])
-  formats   VideoFormat[]
-  processingLogs VideoProcessingLog[]
-}
-
-enum VideoStatus {
-  queued
-  processing
-  completed
-  failed
-  cancelled
+  processingStartedAt   DateTime?
+  status                VideoStatus          @default(queued)
+  thumbnailUrl          String?
+  title                 String?
+  videoUrl              String?
+  prompt                Prompt               @relation(fields: [promptId], references: [id])
+  formats               VideoFormat[]
+  processingLogs        VideoProcessingLog[]
 }
 
 model VideoFormat {
-  id        String   @id @default(uuid())
-  videoId   String
-  resolution String  // "480p", "720p", "1080p"
-  url       String
-
-  video     Video    @relation(fields: [videoId], references: [id])
+  id         String @id @default(uuid())
+  videoId    String
+  resolution String
+  url        String
+  video      Video  @relation(fields: [videoId], references: [id])
 
   @@index([videoId])
   @@index([resolution])
@@ -110,43 +87,55 @@ model ActivityLog {
   id        String   @id @default(cuid())
   userId    String
   promptId  String?
-  action    String         
+  action    String
   metadata  Json?
   createdAt DateTime @default(now())
-
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   prompt    Prompt?  @relation(fields: [promptId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model UserQuota {
-  id            String   @id @default(cuid())
-  userId        String   @unique
-  monthlyPrompts Int     @default(10) // Videos per month
-  usedPrompts   Int     @default(0)   // How many used
-  monthlyVideoMinutes Int @default(60) // Total video time limit
-  usedVideoMinutes Int   @default(0)   // How much time used
-  resetDate     DateTime // When quota resets
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                  String   @id @default(cuid())
+  userId              String   @unique
+  monthlyPrompts      Int      @default(10)
+  usedPrompts         Int      @default(0)
+  monthlyVideoMinutes Int      @default(60)
+  usedVideoMinutes    Int      @default(0)
+  resetDate           DateTime
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model VideoProcessingLog {
   id        String   @id @default(cuid())
   videoId   String
-  stage     String   // "code_validation", "vm_setup", "execution", "rendering"
+  stage     String
   message   String
-  level     LogLevel @default(info) // info, warning, error
-  metadata  Json?    // Additional context
+  level     LogLevel @default(info)
+  metadata  Json?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
   video     Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
 
   @@index([videoId])
   @@index([stage])
   @@index([createdAt])
+}
+
+enum PromptStatus {
+  pending
+  processing
+  completed
+  failed
+}
+
+enum VideoStatus {
+  queued
+  processing
+  completed
+  failed
+  cancelled
 }
 
 enum LogLevel {
