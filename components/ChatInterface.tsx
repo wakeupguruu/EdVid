@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Send, Loader2, Video, AlertCircle, Play, Download, Plus } from "lucide-react";
+import { Send, Loader2, Video, AlertCircle, Play, Download, Plus, RefreshCw } from "lucide-react";
 import { Message } from "@/types/chat";
 import { ChatSuggestions } from "./ChatSuggestions";
 
@@ -93,7 +93,16 @@ export function ChatInterface({ onSendMessage, messages, isLoading, error, curre
     textareaRef.current?.focus();
   };
 
-  const renderVideoPlayer = (videoData: any) => {
+  const handleRegenerate = async (index: number) => {
+    if (isLoading) return;
+    // Find the preceding user message
+    const userMessage = messages[index - 1];
+    if (userMessage && userMessage.role === "user") {
+      await onSendMessage(userMessage.content);
+    }
+  };
+
+  const renderVideoPlayer = (videoData: any, index: number) => {
     // Show loading state while processing
     if (videoData.status === "queued" || videoData.status === "processing") {
       return (
@@ -153,6 +162,15 @@ export function ChatInterface({ onSendMessage, messages, isLoading, error, curre
                 >
                   <Download className="h-3 w-3 mr-1" />
                   Download
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-6 px-2 text-xs"
+                  onClick={() => handleRegenerate(index)}
+                  disabled={isLoading}
+                >
+                  <RefreshCw className={`h-3 w-3 mr-1 ${isLoading ? 'animate-spin' : ''}`} />
+                  Regenerate
                 </Button>
                 {currentPromptId && (
                   <Button
@@ -251,7 +269,7 @@ export function ChatInterface({ onSendMessage, messages, isLoading, error, curre
                   <div className="flex-1">
                     <p className="text-sm whitespace-pre-wrap">{message.content}</p>
                     {message.role === "assistant" && message.videoData && (
-                      renderVideoPlayer(message.videoData)
+                      renderVideoPlayer(message.videoData, index)
                     )}
                   </div>
                 </div>
