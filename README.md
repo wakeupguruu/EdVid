@@ -297,5 +297,5 @@ If you find this project helpful, please give it a star! Your support helps us g
 
 ---
 
-**Last Updated**: November 2025
+**Last Updated**: December 2025
 **Version**: 1.0.0
